@@ -1,6 +1,6 @@
 # Terraform Hydra Provider
 
-This provider allow managing [ory/hydra](https://github.com/ory/hydra) following resources through Hydra Admin API:
+This provider is used to manage [ory/hydra](https://github.com/ory/hydra) following resources through Hydra Admin API:
 
 - OAuth2 Clients (through `hydra_oauth2_client` resource)
 - JWKS (through `hydra_jwks` resource and data source)
@@ -12,6 +12,7 @@ terraform {
   required_providers {
     hydra = {
       source = "svrakitin/hydra"
+      version = "0.1.0"
     }
   }
 }
