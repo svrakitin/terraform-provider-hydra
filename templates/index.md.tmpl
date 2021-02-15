@@ -4,6 +4,25 @@ description: |-
   Provider to manage [ory/hydra](https://github.com/ory/hydra) resources.
 ---
 
-# Hydra Provider
+This provider is used to manage [ory/hydra](https://github.com/ory/hydra) resources through Hydra Admin API.
 
-See [ory/hydra](https://github.com/ory/hydra) REST API [docs](https://www.ory.sh/hydra/docs/reference/api/) for resource description.
+Supported resources:
+
+- OAuth2 Clients (`hydra_oauth2_client` resource)
+- JWKS (`hydra_jwks` resource and data source)
+
+See [ory/hydra](https://github.com/ory/hydra) [REST API docs](https://www.ory.sh/hydra/docs/reference/api/) for description of resources.
+
+## Example usage
+
+```hcl
+provider "hydra" {
+  endpoint = "http://hydra-admin.localhost"
+}
+```
+
+## Schema
+
+### Required
+
+- **endpoint** (String) - Hydra Admin API URL
