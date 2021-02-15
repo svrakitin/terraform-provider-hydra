@@ -60,7 +60,9 @@ resource "hydra_jwks" "generated" {
 		alg = "RS256"
 		kid = "generated"
 		use = "sig"
-		version = "1"
+		keepers = {
+			version = 1
+		}
 	}
 }
 `

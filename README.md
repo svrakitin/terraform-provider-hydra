@@ -29,10 +29,13 @@ resource "hydra_jwks" "generated" {
   name = "generated"
 
   generator {
-    alg     = "RS256"
-    kid     = "generated"
-    use     = "sig"
-    version = "1"
+    alg = "RS256"
+    kid = "generated"
+    use = "sig"
+
+    keepers = {
+      version = 1
+    }
   }
 }
 

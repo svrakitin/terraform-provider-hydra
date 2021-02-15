@@ -51,11 +51,11 @@ A JSON Web Key is identified by its set and key id. ORY Hydra uses this function
 								"sig", "enc",
 							}, false),
 						},
-						"version": {
-							Type:        schema.TypeString,
+						"keepers": {
+							Type:        schema.TypeMap,
 							Required:    true,
 							ForceNew:    true,
-							Description: "Field used to force key generation.",
+							Description: "Arbitrary map of values that, when changed, will trigger recreation of resource.",
 						},
 					},
 				},

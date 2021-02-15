@@ -21,10 +21,13 @@ resource "hydra_jwks" "generated" {
   name = "generated"
 
   generator {
-    alg     = "RS256"
-    kid     = "generated"
-    use     = "sig"
-    version = "1"
+    alg = "RS256"
+    kid = "generated"
+    use = "sig"
+
+    keepers = {
+      version = 1
+    }
   }
 }
 
@@ -73,9 +76,9 @@ resource "hydra_jwks" "inlined" {
 Required:
 
 - **alg** (String)
+- **keepers** (Map of String) Arbitrary map of values that, when changed, will trigger recreation of resource.
 - **kid** (String)
 - **use** (String)
-- **version** (String) Field used to force key generation.
 
 
 <a id="nestedblock--key"></a>
