@@ -7,7 +7,7 @@ This provider allow managing [ory/hydra](https://github.com/ory/hydra) following
 
 ## Example usage
 
-```terraform
+```hcl
 terraform {
   required_providers {
     hydra = {
@@ -36,7 +36,7 @@ data "hydra_jwks" "default" {
 }
 
 resource "hydra_oauth2_client" "example" {
-	client_id = "example"
+  client_id = "example"
 	client_name = "example"
 
 	redirect_uris = ["http://localhost:8080/callback"]
