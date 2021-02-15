@@ -1,0 +1,7 @@
+build
+vendor/
+*.log
+*.tf
+.terraform
+terraform-provider-hydra*
+terraform.*

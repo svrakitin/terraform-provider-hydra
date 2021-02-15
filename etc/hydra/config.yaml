@@ -1,0 +1,21 @@
+serve:
+  cookies:
+    same_site_mode: Lax
+
+urls:
+  self:
+    issuer: http://localhost:4444
+
+secrets:
+  system:
+    - secretsecretsecret
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+    pairwise:
+      salt: secretsecretsecret
+
+strategies:
+  access_token: jwt
