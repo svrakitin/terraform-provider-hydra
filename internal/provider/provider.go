@@ -24,16 +24,34 @@ func New() *schema.Provider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_URL", nil),
 			},
-			"basic_auth_user": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_USER", nil),
-			},
-			"basic_auth_pass": {
-				Type:        schema.TypeString,
-				Sensitive:   true,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_PASS", nil),
+			"authentication": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"basic": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:        schema.TypeString,
+										Required:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_BASIC_AUTH_USERNAME", nil),
+									},
+									"password": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_BASIC_AUTH_PASSWORD", nil),
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -62,10 +80,13 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 	}
 
 	var transport runtime.ClientTransport
-	authUser := data.Get("basic_auth_user").(string)
-	authPass := data.Get("basic_auth_pass").(string)
-	if authUser != "" && authPass != "" {
-		tr := &BasicAuthTransport{user: authUser, pass: authPass, RoundTripper: http.DefaultTransport}
+	if basicAuth, ok := data.GetOk("authentication.0.basic.0"); ok {
+		auth := basicAuth.(map[string]interface{})
+		tr := &BasicAuthTransport{
+			username:     auth["username"].(string),
+			password:     auth["password"].(string),
+			RoundTripper: http.DefaultTransport,
+		}
 		httpClient := &http.Client{Transport: tr}
 		transport = httptransport.NewWithClient(cfg.Host, cfg.BasePath, cfg.Schemes, httpClient)
 	} else {
@@ -77,11 +98,11 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 }
 
 type BasicAuthTransport struct {
-	user, pass string
+	username, password string
 	http.RoundTripper
 }
 
 func (ct *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.SetBasicAuth(ct.user, ct.pass)
+	req.SetBasicAuth(ct.username, ct.password)
 	return ct.RoundTripper.RoundTrip(req)
 }
