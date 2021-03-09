@@ -25,9 +25,10 @@ func New() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_URL", nil),
 			},
 			"authentication": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Optional block to specify an authentication method which is used to access Hydra Admin API.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"basic": {
@@ -73,7 +74,7 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 		return nil, diag.FromErr(err)
 	}
 
-	cfg := &hydraclient.TransportConfig{
+	transportConfig := &hydraclient.TransportConfig{
 		Schemes:  []string{endpointURL.Scheme},
 		Host:     endpointURL.Host,
 		BasePath: endpointURL.Path,
@@ -82,15 +83,25 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 	var transport runtime.ClientTransport
 	if basicAuth, ok := data.GetOk("authentication.0.basic.0"); ok {
 		auth := basicAuth.(map[string]interface{})
-		tr := &BasicAuthTransport{
-			username:     auth["username"].(string),
-			password:     auth["password"].(string),
-			RoundTripper: http.DefaultTransport,
+		httpClient := &http.Client{
+			Transport: &BasicAuthTransport{
+				username:     auth["username"].(string),
+				password:     auth["password"].(string),
+				RoundTripper: http.DefaultTransport,
+			},
 		}
-		httpClient := &http.Client{Transport: tr}
-		transport = httptransport.NewWithClient(cfg.Host, cfg.BasePath, cfg.Schemes, httpClient)
+		transport = httptransport.NewWithClient(
+			transportConfig.Host,
+			transportConfig.BasePath,
+			transportConfig.Schemes,
+			httpClient,
+		)
 	} else {
-		transport = httptransport.New(cfg.Host, cfg.BasePath, cfg.Schemes)
+		transport = httptransport.New(
+			transportConfig.Host,
+			transportConfig.BasePath,
+			transportConfig.Schemes,
+		)
 	}
 
 	client := hydraclient.New(transport, nil)
@@ -102,7 +113,7 @@ type BasicAuthTransport struct {
 	http.RoundTripper
 }
 
-func (ct *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.SetBasicAuth(ct.username, ct.password)
-	return ct.RoundTripper.RoundTrip(req)
+func (bat *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.SetBasicAuth(bat.username, bat.password)
+	return bat.RoundTripper.RoundTrip(req)
 }

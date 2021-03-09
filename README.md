@@ -53,8 +53,9 @@ resource "hydra_oauth2_client" "example" {
 }
 ```
 
-
 ## Authentication
+
+### Basic Auth
 
 Support for Basic Auth on the Hydra Admin API is available.
 
@@ -62,7 +63,11 @@ Support for Basic Auth on the Hydra Admin API is available.
 provider "hydra" {
   endpoint = "http://hydra-admin.localhost"
 
-  basic_auth_user = var.hydra_basic_auth_user
-  basic_auth_pass = var.hydra_basic_auth_pass
+  authentication {
+    basic {
+      username = var.hydra_admin_basic_auth_username
+      password = var.hydra_admin_basic_auth_password
+    }
+  }
 }
 ```

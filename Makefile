@@ -6,11 +6,11 @@ build:
 
 .PHONY: test
 test:
-	go test ./... -timeout=120s -parallel=4
+	go test ./... -timeout=60s -parallel=4
 
 .PHONY: testacc
 testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 5m
 
 .PHONY: lint
 lint:

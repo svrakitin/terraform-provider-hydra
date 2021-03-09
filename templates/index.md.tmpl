@@ -15,14 +15,6 @@ See [ory/hydra](https://github.com/ory/hydra) [REST API docs](https://www.ory.sh
 
 ## Example usage
 
-```hcl
-provider "hydra" {
-  endpoint = "http://hydra-admin.localhost"
-}
-```
+{{ tffile "examples/provider/provider.tf" }}
 
-## Schema
-
-### Required
-
-- **endpoint** (String) - Hydra Admin API URL
+{{ .SchemaMarkdown | trimspace }}
