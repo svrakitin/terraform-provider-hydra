@@ -1,12 +1,14 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/url"
 
-	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	hydraclient "github.com/ory/hydra-client-go/client"
@@ -51,6 +53,35 @@ func New() *schema.Provider {
 								},
 							},
 						},
+						"tls": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"insecure_skip_verify": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_TLS_AUTH_INSECURE", false),
+										Description: "Controls whether a client verifies the server's certificate chain and host name.",
+									},
+									"certificate": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_TLS_AUTH_CERT_DATA", nil),
+										Description: "PEM-encoded client certificate for TLS authentication.",
+									},
+									"key": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_TLS_AUTH_KEY_DATA", nil),
+										Description: "PEM-encoded client certificate key for TLS authentication.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -74,46 +105,65 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 		return nil, diag.FromErr(err)
 	}
 
-	transportConfig := &hydraclient.TransportConfig{
-		Schemes:  []string{endpointURL.Scheme},
-		Host:     endpointURL.Host,
-		BasePath: endpointURL.Path,
+	httpClient, err := configureHTTPClient(data)
+	if err != nil {
+		return nil, diag.FromErr(err)
 	}
 
-	var transport runtime.ClientTransport
+	client := hydraclient.New(
+		httptransport.NewWithClient(
+			endpointURL.Host,
+			endpointURL.Path,
+			[]string{endpointURL.Scheme},
+			httpClient,
+		),
+		nil,
+	)
+
+	return client.Admin, nil
+}
+
+func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {
+	httpTransport := cleanhttp.DefaultPooledTransport()
+	httpClient := &http.Client{
+		Transport: httpTransport,
+	}
+
+	if tlsAuth, ok := data.GetOk("authentication.0.tls.0"); ok {
+		auth := tlsAuth.(map[string]interface{})
+		certificate := bytes.NewBufferString(auth["certificate"].(string)).Bytes()
+		key := bytes.NewBufferString(auth["key"].(string)).Bytes()
+		insecureSkipVerify := auth["insecure_skip_verify"].(bool)
+
+		cert, err := tls.X509KeyPair(certificate, key)
+		if err != nil {
+			return nil, err
+		}
+
+		httpTransport.TLSClientConfig = &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			InsecureSkipVerify: insecureSkipVerify,
+		}
+	}
+
 	if basicAuth, ok := data.GetOk("authentication.0.basic.0"); ok {
 		auth := basicAuth.(map[string]interface{})
-		httpClient := &http.Client{
-			Transport: &BasicAuthTransport{
-				username:     auth["username"].(string),
-				password:     auth["password"].(string),
-				RoundTripper: http.DefaultTransport,
-			},
+		httpClient.Transport = &BasicAuthTransport{
+			username: auth["username"].(string),
+			password: auth["password"].(string),
+			Wrapped:  httpTransport,
 		}
-		transport = httptransport.NewWithClient(
-			transportConfig.Host,
-			transportConfig.BasePath,
-			transportConfig.Schemes,
-			httpClient,
-		)
-	} else {
-		transport = httptransport.New(
-			transportConfig.Host,
-			transportConfig.BasePath,
-			transportConfig.Schemes,
-		)
 	}
 
-	client := hydraclient.New(transport, nil)
-	return client.Admin, nil
+	return httpClient, nil
 }
 
 type BasicAuthTransport struct {
 	username, password string
-	http.RoundTripper
+	Wrapped            *http.Transport
 }
 
 func (bat *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(bat.username, bat.password)
-	return bat.RoundTripper.RoundTrip(req)
+	return bat.Wrapped.RoundTrip(req)
 }

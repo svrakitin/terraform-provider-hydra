@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +45,8 @@ func TestProvider_basicAuth(t *testing.T) {
 	}))
 	defer hydraAdminStub.Close()
 	resource.Test(t, resource.TestCase{
-		Providers: testAccProviders,
+		IsUnitTest: true,
+		Providers:  testAccProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(testAccProviderBasicAuthConfig, hydraAdminStub.URL, username, password),
@@ -55,6 +57,32 @@ func TestProvider_basicAuth(t *testing.T) {
 			{
 				Config:      fmt.Sprintf(testAccProviderBasicAuthConfig, hydraAdminStub.URL, "invalid", "invalid"),
 				ExpectError: regexp.MustCompile("getJsonWebKeySetUnauthorized"),
+			},
+		},
+	})
+}
+
+func TestProvider_tlsAuth(t *testing.T) {
+	certFile := "./fixtures/tls.crt"
+	keyFile := "./fixtures/tls.key"
+
+	hydraAdminStub := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if len(req.TLS.PeerCertificates) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	hydraAdminStub.TLS.ClientAuth = tls.RequireAnyClientCert
+	defer hydraAdminStub.Close()
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		Providers:  testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccProviderTLSAuthConfig, hydraAdminStub.URL, certFile, keyFile),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+				),
 			},
 		},
 	})
@@ -72,6 +100,24 @@ provider "hydra" {
 		basic {
 			username = "%s"
 			password = "%s"
+		}
+	}
+}
+
+data "hydra_jwks" "test" {
+	name = "test"
+}
+`
+
+	testAccProviderTLSAuthConfig string = `
+provider "hydra" {
+	endpoint = "%s"
+
+	authentication {
+		tls {
+			insecure_skip_verify = true
+			certificate          = file("%s")
+			key                  = file("%s")
 		}
 	}
 }
