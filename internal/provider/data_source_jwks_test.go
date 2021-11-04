@@ -28,7 +28,7 @@ func TestAccDataSourceJWKS(t *testing.T) {
 }
 
 const (
-	testAccDataSourceJWKSConfig string = `
+	testAccDataSourceJWKSConfig = `
 resource "hydra_jwks" "generated" {
 	name = "generated"
 

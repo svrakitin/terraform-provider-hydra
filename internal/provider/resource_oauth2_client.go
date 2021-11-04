@@ -256,10 +256,8 @@ func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 	}
 
 	client = resp.Payload
-	data.SetId(client.ClientID)
-	data.Set("client_secret", client.ClientSecret)
 
-	return readOAuth2ClientResource(ctx, data, meta)
+	return diag.FromErr(dataFromClient(data, client))
 }
 
 func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -278,11 +276,9 @@ func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	if err := dataFromClient(data, resp.Payload); err != nil {
-		return diag.FromErr(err)
-	}
+	client := resp.Payload
 
-	return nil
+	return diag.FromErr(dataFromClient(data, client))
 }
 
 func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -290,7 +286,7 @@ func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 
 	client := dataToClient(data)
 
-	_, err := adminClient.UpdateOAuth2Client(
+	resp, err := adminClient.UpdateOAuth2Client(
 		admin.NewUpdateOAuth2ClientParamsWithContext(ctx).
 			WithID(data.Id()).
 			WithBody(client),
@@ -299,9 +295,9 @@ func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	data.Set("client_secret", client.ClientSecret)
+	client = resp.Payload
 
-	return readOAuth2ClientResource(ctx, data, meta)
+	return diag.FromErr(dataFromClient(data, client))
 }
 
 func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -319,12 +315,16 @@ func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 }
 
 func dataFromClient(data *schema.ResourceData, client *models.OAuth2Client) error {
+	data.SetId(client.ClientID)
 	data.Set("allowed_cors_origins", client.AllowedCorsOrigins)
 	data.Set("audience", client.Audience)
 	data.Set("backchannel_logout_session_required", client.BackchannelLogoutSessionRequired)
 	data.Set("backchannel_logout_uri", client.BackchannelLogoutURI)
 	data.Set("client_id", client.ClientID)
 	data.Set("client_name", client.ClientName)
+	if client.ClientSecret != "" {
+		data.Set("client_secret", client.ClientSecret)
+	}
 	data.Set("client_secret_expires_at", client.ClientSecretExpiresAt)
 	data.Set("client_uri", client.ClientURI)
 	data.Set("contacts", client.Contacts)
@@ -364,6 +364,9 @@ func dataToClient(data *schema.ResourceData) *models.OAuth2Client {
 	client.BackchannelLogoutURI = data.Get("backchannel_logout_uri").(string)
 	client.ClientID = data.Get("client_id").(string)
 	client.ClientName = data.Get("client_name").(string)
+	if cs, ok := data.GetOk("client_secret"); ok {
+		client.ClientSecret = cs.(string)
+	}
 	client.ClientSecretExpiresAt = int64(data.Get("client_secret_expires_at").(int))
 	client.ClientURI = data.Get("client_uri").(string)
 	client.Contacts = strSlice(data.Get("contacts").([]interface{}))

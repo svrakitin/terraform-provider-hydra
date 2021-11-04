@@ -52,7 +52,7 @@ func TestAccResourceJWKS_Inlined(t *testing.T) {
 }
 
 const (
-	testAccResourceJWKSGeneratedConfig string = `
+	testAccResourceJWKSGeneratedConfig = `
 resource "hydra_jwks" "generated" {
 	name = "generated"
 
@@ -66,7 +66,7 @@ resource "hydra_jwks" "generated" {
 	}
 }
 `
-	testAccResourceJWKSInlinedConfig string = `
+	testAccResourceJWKSInlinedConfig = `
 resource "hydra_jwks" "inlined" {
 	name = "inlined"
 
