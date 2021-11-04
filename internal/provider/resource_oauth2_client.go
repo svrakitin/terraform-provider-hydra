@@ -307,11 +307,8 @@ func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 		admin.NewDeleteOAuth2ClientParamsWithContext(ctx).
 			WithID(data.Id()),
 	)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 
-	return nil
+	return diag.FromErr(err)
 }
 
 func dataFromClient(data *schema.ResourceData, client *models.OAuth2Client) error {
