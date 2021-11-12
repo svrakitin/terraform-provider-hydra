@@ -16,7 +16,7 @@ terraform {
   required_providers {
     hydra = {
       source = "svrakitin/hydra"
-      version = "0.1.3"
+      version = "0.1.4"
     }
   }
 }
@@ -44,11 +44,12 @@ data "hydra_jwks" "default" {
 }
 
 resource "hydra_oauth2_client" "example" {
-  client_id = "example"
+  client_id   = "example"
   client_name = "example"
 
   redirect_uris = ["http://localhost:8080/callback"]
-  response_types = ["code"]
+  
+  response_types             = ["code"]
   token_endpoint_auth_method = "none"
 }
 ```
