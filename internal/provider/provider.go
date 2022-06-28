@@ -6,12 +6,15 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/url"
+	"strings"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	hydraclient "github.com/ory/hydra-client-go/client"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 func init() {
@@ -49,6 +52,52 @@ func New() *schema.Provider {
 										Required:    true,
 										Sensitive:   true,
 										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_BASIC_AUTH_PASSWORD", nil),
+									},
+								},
+							},
+						},
+						"oauth2": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"token_endpoint": {
+										Type:        schema.TypeString,
+										Required:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_OAUTH2_TOKEN_ENDPOINT", nil),
+										Description: "Token endpoint to request an access token",
+									},
+									"client_id": {
+										Type:        schema.TypeString,
+										Required:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_OAUTH2_CLIENT_ID", nil),
+										Description: "Client ID",
+									},
+									"client_secret": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_OAUTH2_CLIENT_SECRET", nil),
+										Description: "Client Secret",
+									},
+									"audience": {
+										Type:        schema.TypeList,
+										Optional:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_OAUTH2_AUDIENCE", nil),
+										Description: "Audience for an issued access token",
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
+									"scopes": {
+										Type:        schema.TypeList,
+										Optional:    true,
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_OAUTH2_SCOPES", nil),
+										Description: "Scopes for an issued access token",
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
 									},
 								},
 							},
@@ -152,6 +201,28 @@ func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {
 			username: auth["username"].(string),
 			password: auth["password"].(string),
 			Wrapped:  httpTransport,
+		}
+	}
+
+	if oauth2Auth, ok := data.GetOk("authentication.0.oauth2.0"); ok {
+		auth := oauth2Auth.(map[string]interface{})
+
+		clientCredentialsConfig := clientcredentials.Config{
+			TokenURL:       auth["token_endpoint"].(string),
+			ClientID:       auth["client_id"].(string),
+			ClientSecret:   auth["client_secret"].(string),
+			Scopes:         strSlice(auth["scopes"].([]interface{})),
+			EndpointParams: make(url.Values),
+		}
+		if rawAudience, ok := auth["audience"]; ok {
+			audience := strings.Join(strSlice(rawAudience.([]interface{})), " ")
+			clientCredentialsConfig.EndpointParams.Set("audience", audience)
+		}
+
+		tokenSource := clientCredentialsConfig.TokenSource(context.Background())
+		httpClient.Transport = &oauth2.Transport{
+			Base:   httpTransport,
+			Source: oauth2.ReuseTokenSource(nil, tokenSource),
 		}
 	}
 

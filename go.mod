@@ -36,6 +36,11 @@ require (
 )
 
 require (
+	github.com/stretchr/testify v1.7.0
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+)
+
+require (
 	cloud.google.com/go v0.61.0 // indirect
 	cloud.google.com/go/storage v1.10.0 // indirect
 	github.com/Masterminds/goutils v1.1.0 // indirect
@@ -83,6 +88,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/posener/complete v1.1.1 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/ulikunitz/xz v0.5.8 // indirect
@@ -91,11 +97,11 @@ require (
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.0.0-20200713011307-fd294ab11aed // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/api v0.29.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
