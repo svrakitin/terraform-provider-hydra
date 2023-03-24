@@ -370,7 +370,10 @@ func dataToClient(data *schema.ResourceData) *models.OAuth2Client {
 	client.FrontchannelLogoutSessionRequired = data.Get("frontchannel_logout_session_required").(bool)
 	client.FrontchannelLogoutURI = data.Get("frontchannel_logout_uri").(string)
 	client.GrantTypes = strSlice(data.Get("grant_types").([]interface{}))
-	client.Jwks = dataToJWKS(data, "jwk")
+	// only add jwks if jwk is declared
+	if jwk, ok := data.GetOk("jwk"); ok && jwk != nil {
+		client.Jwks = dataToJWKS(data, "jwk")
+	}
 	client.JwksURI = data.Get("jwks_uri").(string)
 	client.LogoURI = data.Get("logo_uri").(string)
 	client.Metadata = data.Get("metadata")
