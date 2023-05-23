@@ -22,7 +22,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.46.2
+          version: v1.51.2
       - name: Run services
         run: docker-compose up -d
       - name: Test
