@@ -191,8 +191,8 @@ provider "hydra" {
 
 	authentication {
 		http_header {
-			header = "%s"
-			credentials  = "%s"
+			header      = "%s"
+			credentials = "%s"
 		}
 	}
 }

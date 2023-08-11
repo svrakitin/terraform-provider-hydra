@@ -275,7 +275,7 @@ type HttpHeaderAuthTransport struct {
 	Wrapped             *http.Transport
 }
 
-func (haat *HttpHeaderAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add(haat.header, haat.credentials)
-	return haat.Wrapped.RoundTrip(req)
+func (hhat *HttpHeaderAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add(hhat.header, hhat.credentials)
+	return hhat.Wrapped.RoundTrip(req)
 }
