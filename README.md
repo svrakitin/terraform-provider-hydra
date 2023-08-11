@@ -75,7 +75,7 @@ provider "hydra" {
 
 ### HTTP header
 
-Support for auth using an abitrary HTTP request header is available.  The header name defaults to `Authorization` if not otherwise set.
+Support for auth using an arbitrary HTTP request header is available.  The header name defaults to `Authorization` if not otherwise set.
 
 ```hcl
 provider "hydra" {
