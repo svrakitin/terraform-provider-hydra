@@ -72,3 +72,20 @@ provider "hydra" {
   }
 }
 ```
+
+### HTTP header
+
+Support for auth using an arbitrary HTTP request header is available.  The header name defaults to `Authorization` if not otherwise set.
+
+```hcl
+provider "hydra" {
+  endpoint = "http://hydra-admin.localhost"
+
+  authentication {
+    http_header {
+      name  = var.hydra_admin_auth_http_header_name
+      value = var.hydra_admin_auth_http_header_value
+    }
+  }
+}
+```

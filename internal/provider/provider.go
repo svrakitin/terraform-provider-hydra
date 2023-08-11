@@ -56,6 +56,28 @@ func New() *schema.Provider {
 								},
 							},
 						},
+						"http_header": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of the HTTP header to send for authorization.  Defaults to Authorization.",
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_HTTP_HEADER_NAME", "Authorization"),
+									},
+									"value": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Sensitive:   true,
+										Description: "Value presented in the configured HTTP header",
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_HTTP_HEADER_VALUE", nil),
+									},
+								},
+							},
+						},
 						"oauth2": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -204,6 +226,15 @@ func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {
 		}
 	}
 
+	if httpHeaderAuth, ok := data.GetOk("authentication.0.http_header.0"); ok {
+		auth := httpHeaderAuth.(map[string]interface{})
+		httpClient.Transport = &HttpHeaderAuthTransport{
+			name:    auth["name"].(string),
+			value:   auth["value"].(string),
+			Wrapped: httpTransport,
+		}
+	}
+
 	if oauth2Auth, ok := data.GetOk("authentication.0.oauth2.0"); ok {
 		auth := oauth2Auth.(map[string]interface{})
 
@@ -237,4 +268,14 @@ type BasicAuthTransport struct {
 func (bat *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.SetBasicAuth(bat.username, bat.password)
 	return bat.Wrapped.RoundTrip(req)
+}
+
+type HttpHeaderAuthTransport struct {
+	name, value string
+	Wrapped     *http.Transport
+}
+
+func (hhat *HttpHeaderAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add(hhat.name, hhat.value)
+	return hhat.Wrapped.RoundTrip(req)
 }
