@@ -65,6 +65,32 @@ func TestProvider_basicAuth(t *testing.T) {
 	})
 }
 
+func TestProvider_httpHeaderAuth(t *testing.T) {
+	header := "My-Header"
+	credentials := "t0ps3cr3t"
+
+	hydraAdminStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if c := req.Header.Get(header); c != credentials {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer hydraAdminStub.Close()
+	resource.Test(t, resource.TestCase{
+		IsUnitTest: true,
+		Providers:  testAccProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(testAccProviderHttpHeaderConfig, hydraAdminStub.URL, header, credentials),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestProvider_tlsAuth(t *testing.T) {
 	certFile := "./fixtures/tls.crt"
 	keyFile := "./fixtures/tls.key"
@@ -150,6 +176,23 @@ provider "hydra" {
 		basic {
 			username = "%s"
 			password = "%s"
+		}
+	}
+}
+
+data "hydra_jwks" "test" {
+	name = "test"
+}
+`
+
+	testAccProviderHttpHeaderConfig = `
+provider "hydra" {
+	endpoint = "%s"
+
+	authentication {
+		http_header {
+			header = "%s"
+			credentials  = "%s"
 		}
 	}
 }
