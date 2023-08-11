@@ -26,28 +26,41 @@ provider "hydra" {
 
 ### Required
 
-- **endpoint** (String)
+- `endpoint` (String)
 
 ### Optional
 
-- **authentication** (Block List, Max: 1) Optional block to specify an authentication method which is used to access Hydra Admin API. (see [below for nested schema](#nestedblock--authentication))
+- `authentication` (Block List, Max: 1) Optional block to specify an authentication method which is used to access Hydra Admin API. (see [below for nested schema](#nestedblock--authentication))
 
 <a id="nestedblock--authentication"></a>
 ### Nested Schema for `authentication`
 
 Optional:
 
-- **basic** (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--basic))
-- **oauth2** (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--oauth2))
-- **tls** (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--tls))
+- `basic` (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--basic))
+- `http_header` (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--http_header))
+- `oauth2` (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--oauth2))
+- `tls` (Block List, Max: 1) (see [below for nested schema](#nestedblock--authentication--tls))
 
 <a id="nestedblock--authentication--basic"></a>
 ### Nested Schema for `authentication.basic`
 
 Required:
 
-- **password** (String, Sensitive)
-- **username** (String)
+- `password` (String, Sensitive)
+- `username` (String)
+
+
+<a id="nestedblock--authentication--http_header"></a>
+### Nested Schema for `authentication.http_header`
+
+Required:
+
+- `credentials` (String, Sensitive) Credentials supplied in the configured HTTP header
+
+Optional:
+
+- `header` (String) Name of the HTTP header to send for authorization.  Defaults to Authorization.
 
 
 <a id="nestedblock--authentication--oauth2"></a>
@@ -55,14 +68,14 @@ Required:
 
 Required:
 
-- **client_id** (String) Client ID
-- **client_secret** (String, Sensitive) Client Secret
-- **token_endpoint** (String) Token endpoint to request an access token
+- `client_id` (String) Client ID
+- `client_secret` (String, Sensitive) Client Secret
+- `token_endpoint` (String) Token endpoint to request an access token
 
 Optional:
 
-- **audience** (List of String) Audience for an issued access token
-- **scopes** (List of String) Scopes for an issued access token
+- `audience` (List of String) Audience for an issued access token
+- `scopes` (List of String) Scopes for an issued access token
 
 
 <a id="nestedblock--authentication--tls"></a>
@@ -70,9 +83,9 @@ Optional:
 
 Required:
 
-- **certificate** (String, Sensitive) PEM-encoded client certificate for TLS authentication.
-- **key** (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
 
 Optional:
 
-- **insecure_skip_verify** (Boolean) Controls whether a client verifies the server's certificate chain and host name.
+- `insecure_skip_verify` (Boolean) Controls whether a client verifies the server's certificate chain and host name.

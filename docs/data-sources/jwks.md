@@ -27,37 +27,34 @@ data "hydra_jwks" "default" {
 
 ### Required
 
-- **name** (String)
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- `name` (String)
 
 ### Read-Only
 
-- **keys** (List of Object) (see [below for nested schema](#nestedatt--keys))
+- `id` (String) The ID of this resource.
+- `keys` (List of Object) (see [below for nested schema](#nestedatt--keys))
 
 <a id="nestedatt--keys"></a>
 ### Nested Schema for `keys`
 
 Read-Only:
 
-- **alg** (String)
-- **crv** (String)
-- **d** (String)
-- **dp** (String)
-- **dq** (String)
-- **e** (String)
-- **k** (String)
-- **kid** (String)
-- **kty** (String)
-- **n** (String)
-- **p** (String)
-- **q** (String)
-- **qi** (String)
-- **use** (String)
-- **x** (String)
-- **x5c** (List of String)
-- **y** (String)
+- `alg` (String)
+- `crv` (String)
+- `d` (String)
+- `dp` (String)
+- `dq` (String)
+- `e` (String)
+- `k` (String)
+- `kid` (String)
+- `kty` (String)
+- `n` (String)
+- `p` (String)
+- `q` (String)
+- `qi` (String)
+- `use` (String)
+- `x` (String)
+- `x5c` (List of String)
+- `y` (String)
 
 

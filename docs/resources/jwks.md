@@ -62,23 +62,26 @@ resource "hydra_jwks" "inlined" {
 
 ### Required
 
-- **name** (String)
+- `name` (String)
 
 ### Optional
 
-- **generator** (Block List, Max: 1) (see [below for nested schema](#nestedblock--generator))
-- **id** (String) The ID of this resource.
-- **key** (Block List) (see [below for nested schema](#nestedblock--key))
+- `generator` (Block List, Max: 1) (see [below for nested schema](#nestedblock--generator))
+- `key` (Block List) (see [below for nested schema](#nestedblock--key))
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 <a id="nestedblock--generator"></a>
 ### Nested Schema for `generator`
 
 Required:
 
-- **alg** (String)
-- **keepers** (Map of String) Arbitrary map of values that, when changed, will trigger recreation of resource.
-- **kid** (String)
-- **use** (String)
+- `alg` (String)
+- `keepers` (Map of String) Arbitrary map of values that, when changed, will trigger recreation of resource.
+- `kid` (String)
+- `use` (String)
 
 
 <a id="nestedblock--key"></a>
@@ -86,25 +89,25 @@ Required:
 
 Required:
 
-- **alg** (String)
-- **kid** (String)
-- **kty** (String)
-- **use** (String)
+- `alg` (String)
+- `kid` (String)
+- `kty` (String)
+- `use` (String)
 
 Optional:
 
-- **crv** (String)
-- **d** (String, Sensitive)
-- **dp** (String, Sensitive)
-- **dq** (String, Sensitive)
-- **e** (String, Sensitive)
-- **k** (String, Sensitive)
-- **n** (String)
-- **p** (String, Sensitive)
-- **q** (String, Sensitive)
-- **qi** (String, Sensitive)
-- **x** (String, Sensitive)
-- **x5c** (List of String)
-- **y** (String, Sensitive)
+- `crv` (String)
+- `d` (String, Sensitive)
+- `dp` (String, Sensitive)
+- `dq` (String, Sensitive)
+- `e` (String, Sensitive)
+- `k` (String, Sensitive)
+- `n` (String)
+- `p` (String, Sensitive)
+- `q` (String, Sensitive)
+- `qi` (String, Sensitive)
+- `x` (String, Sensitive)
+- `x5c` (List of String)
+- `y` (String, Sensitive)
 
 
