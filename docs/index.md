@@ -56,11 +56,11 @@ Required:
 
 Required:
 
-- `credentials` (String, Sensitive) Credentials supplied in the configured HTTP header
+- `value` (String, Sensitive) Value presented in the configured HTTP header
 
 Optional:
 
-- `header` (String) Name of the HTTP header to send for authorization.  Defaults to Authorization.
+- `name` (String) Name of the HTTP header to send for authorization.  Defaults to Authorization.
 
 
 <a id="nestedblock--authentication--oauth2"></a>

@@ -66,11 +66,11 @@ func TestProvider_basicAuth(t *testing.T) {
 }
 
 func TestProvider_httpHeaderAuth(t *testing.T) {
-	header := "My-Header"
-	credentials := "t0ps3cr3t"
+	name := "My-Header"
+	value := "t0ps3cr3t"
 
 	hydraAdminStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if c := req.Header.Get(header); c != credentials {
+		if v := req.Header.Get(name); v != value {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -82,7 +82,7 @@ func TestProvider_httpHeaderAuth(t *testing.T) {
 		Providers:  testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testAccProviderHttpHeaderConfig, hydraAdminStub.URL, header, credentials),
+				Config: fmt.Sprintf(testAccProviderHttpHeaderConfig, hydraAdminStub.URL, name, value),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
 				),
@@ -191,8 +191,8 @@ provider "hydra" {
 
 	authentication {
 		http_header {
-			header      = "%s"
-			credentials = "%s"
+			name  = "%s"
+			value = "%s"
 		}
 	}
 }

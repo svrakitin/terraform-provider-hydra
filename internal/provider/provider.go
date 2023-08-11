@@ -62,18 +62,18 @@ func New() *schema.Provider {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"header": {
+									"name": {
 										Type:        schema.TypeString,
 										Required:    true,
 										Description: "Name of the HTTP header to send for authorization.  Defaults to Authorization.",
-										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_HEADER", "Authorization"),
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_HTTP_HEADER_NAME", "Authorization"),
 									},
-									"credentials": {
+									"value": {
 										Type:        schema.TypeString,
 										Required:    true,
 										Sensitive:   true,
-										Description: "Credentials supplied in the configured HTTP header",
-										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_CREDENTIALS", nil),
+										Description: "Value presented in the configured HTTP header",
+										DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_AUTH_HTTP_HEADER_VALUE", nil),
 									},
 								},
 							},
@@ -229,9 +229,9 @@ func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {
 	if httpHeaderAuth, ok := data.GetOk("authentication.0.http_header.0"); ok {
 		auth := httpHeaderAuth.(map[string]interface{})
 		httpClient.Transport = &HttpHeaderAuthTransport{
-			header:      auth["header"].(string),
-			credentials: auth["credentials"].(string),
-			Wrapped:     httpTransport,
+			name:    auth["name"].(string),
+			value:   auth["value"].(string),
+			Wrapped: httpTransport,
 		}
 	}
 
@@ -271,11 +271,11 @@ func (bat *BasicAuthTransport) RoundTrip(req *http.Request) (*http.Response, err
 }
 
 type HttpHeaderAuthTransport struct {
-	header, credentials string
-	Wrapped             *http.Transport
+	name, value string
+	Wrapped     *http.Transport
 }
 
 func (hhat *HttpHeaderAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add(hhat.header, hhat.credentials)
+	req.Header.Add(hhat.name, hhat.value)
 	return hhat.Wrapped.RoundTrip(req)
 }

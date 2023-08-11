@@ -83,8 +83,8 @@ provider "hydra" {
 
   authentication {
     http_header {
-      header      = var.hydra_admin_auth_header
-      credentials = var.hydra_admin_auth_credentials
+      name  = var.hydra_admin_auth_http_header_name
+      value = var.hydra_admin_auth_http_header_value
     }
   }
 }
