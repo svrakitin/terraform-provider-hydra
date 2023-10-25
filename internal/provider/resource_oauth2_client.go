@@ -24,6 +24,12 @@ Make sure that this endpoint is well protected and only callable by first-party 
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
+			"access_token_strategy": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "Access token strategy to use. Valid options are \"jwt\" and \"opaque\".",
+				ValidateFunc: validation.StringInSlice([]string{"jwt", "opaque"}, false),
+			},
 			"allowed_cors_origins": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -294,6 +300,7 @@ func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 
 func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) error {
 	data.SetId(oAuthClient.GetClientId())
+	data.Set("access_token_strategy", oAuthClient.AccessTokenStrategy)
 	data.Set("allowed_cors_origins", oAuthClient.AllowedCorsOrigins)
 	data.Set("audience", oAuthClient.Audience)
 	data.Set("backchannel_logout_session_required", oAuthClient.BackchannelLogoutSessionRequired)
@@ -340,6 +347,9 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 
 func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	client := &hydra.OAuth2Client{}
+	if ats, ok := data.GetOk("access_token_strategy"); ok {
+		client.AccessTokenStrategy = ptr(ats.(string))
+	}
 	client.AllowedCorsOrigins = strSlice(data.Get("allowed_cors_origins").([]interface{}))
 	client.Audience = strSlice(data.Get("audience").([]interface{}))
 	client.SetBackchannelLogoutSessionRequired(data.Get("backchannel_logout_session_required").(bool))
