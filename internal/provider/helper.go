@@ -1,7 +1,7 @@
 package provider
 
-func strPtr(str string) *string {
-	return &str
+func ptr[T any](v T) *T {
+	return &v
 }
 
 func strSlice(items []interface{}) []string {

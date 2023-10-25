@@ -8,13 +8,12 @@ import (
 
 func TestAccResourceOAuth2Client(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccResourceOAuth2PublicClientConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("hydra_oauth2_client.public", "client_id", "public"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.public", "client_name", "public"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.public", "metadata.first_party", "true"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.public", "redirect_uris.#", "1"),
@@ -27,7 +26,6 @@ func TestAccResourceOAuth2Client(t *testing.T) {
 			{
 				Config: testAccResourceOAuth2SecretClientConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("hydra_oauth2_client.secret", "client_id", "secret"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.secret", "client_name", "secret"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.secret", "client_secret", "secret"),
 					resource.TestCheckResourceAttr("hydra_oauth2_client.secret", "redirect_uris.#", "1"),
@@ -43,8 +41,11 @@ func TestAccResourceOAuth2Client(t *testing.T) {
 
 const (
 	testAccResourceOAuth2PublicClientConfig = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
 resource "hydra_oauth2_client" "public" {
-	client_id = "public"
 	client_name = "public"
 	metadata = {
 		"first_party" = true
@@ -52,16 +53,18 @@ resource "hydra_oauth2_client" "public" {
 	redirect_uris = ["http://localhost:8080/callback"]
 	response_types = ["code"]
 	token_endpoint_auth_method = "none"
-}
-`
+}`
+
 	testAccResourceOAuth2SecretClientConfig = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
 resource "hydra_oauth2_client" "secret" {
-	client_id = "secret"
 	client_name = "secret"
 	client_secret = "secret"
 	redirect_uris = ["http://localhost:8080/callback"]
 	response_types = ["code"]
 	token_endpoint_auth_method = "client_secret_post"
-}
-`
+}`
 )

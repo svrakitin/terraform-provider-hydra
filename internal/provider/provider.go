@@ -8,11 +8,10 @@ import (
 	"net/url"
 	"strings"
 
-	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	hydraclient "github.com/ory/hydra-client-go/client"
+	hydra "github.com/ory/hydra-client-go/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -181,17 +180,15 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 		return nil, diag.FromErr(err)
 	}
 
-	client := hydraclient.New(
-		httptransport.NewWithClient(
-			endpointURL.Host,
-			endpointURL.Path,
-			[]string{endpointURL.Scheme},
-			httpClient,
-		),
-		nil,
-	)
+	cfg := hydra.NewConfiguration()
+	cfg.HTTPClient = httpClient
+	cfg.Servers = hydra.ServerConfigurations{
+		{
+			URL: endpointURL.String(),
+		},
+	}
 
-	return client.Admin, nil
+	return hydra.NewAPIClient(cfg), nil
 }
 
 func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {

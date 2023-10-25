@@ -8,19 +8,16 @@ import (
 
 func TestAccDataSourceJWKS(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:  func() { testAccPreCheck(t) },
-		Providers: testAccProviders,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceJWKSConfig,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.#", "2"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.#", "1"),
 					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.0.alg", "RS256"),
-					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.0.kid", "public:test"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.0.kid", "test"),
 					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.0.use", "sig"),
-					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.1.alg", "RS256"),
-					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.1.kid", "private:test"),
-					resource.TestCheckResourceAttr("data.hydra_jwks.generated", "keys.1.use", "sig"),
 				),
 			},
 		},
@@ -29,6 +26,10 @@ func TestAccDataSourceJWKS(t *testing.T) {
 
 const (
 	testAccDataSourceJWKSConfig = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
 resource "hydra_jwks" "generated" {
 	name = "generated"
 
@@ -44,6 +45,5 @@ resource "hydra_jwks" "generated" {
 
 data "hydra_jwks" "generated" {
 	name = hydra_jwks.generated.name
-}
-`
+}`
 )

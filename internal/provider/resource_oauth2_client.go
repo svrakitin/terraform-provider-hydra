@@ -2,21 +2,22 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/hydra-client-go/client/admin"
-	"github.com/ory/hydra-client-go/models"
+	hydra "github.com/ory/hydra-client-go/v2"
 )
 
 func resourceOAuth2Client() *schema.Resource {
 	return &schema.Resource{
-		Description: `OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows. 
-Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities. 
-To manage ORY Hydra, you will need an OAuth 2.0 Client as well. 
+		Description: `OAuth 2.0 clients are used to perform OAuth 2.0 and OpenID Connect flows.
+Usually, OAuth 2.0 clients are generated for applications which want to consume your OAuth 2.0 or OpenID Connect capabilities.
+To manage ORY Hydra, you will need an OAuth 2.0 Client as well.
 Make sure that this endpoint is well protected and only callable by first-party components.
 `,
 		Importer: &schema.ResourceImporter{
@@ -65,14 +66,14 @@ Make sure that this endpoint is well protected and only callable by first-party 
 				Optional:  true,
 				Computed:  true,
 				Sensitive: true,
-				Description: `Secret is the client's secret. The secret will be included in the create request as cleartext, and then never again. 
+				Description: `Secret is the client's secret. The secret will be included in the create request as cleartext, and then never again.
 The secret is stored using BCrypt so it is impossible to recover it. Tell your users that they need to write the secret down as it will not be made available again.`,
 			},
 			"client_secret_expires_at": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Description: `SecretExpiresAt is an integer holding the time at which the client secret will expire or 0 if it will not expire. 
-The time is represented as the number of seconds from 1970-01-01T00:00:00Z as measured in UTC until the date/time of expiration. 
+				Description: `SecretExpiresAt is an integer holding the time at which the client secret will expire or 0 if it will not expire.
+The time is represented as the number of seconds from 1970-01-01T00:00:00Z as measured in UTC until the date/time of expiration.
 This feature is currently not supported and it's value will always be set to 0.`,
 			},
 			"client_uri": {
@@ -95,8 +96,8 @@ This feature is currently not supported and it's value will always be set to 0.`
 			"frontchannel_logout_uri": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: `RP URL that will cause the RP to log itself out when rendered in an iframe by the OP. 
-An iss (issuer) query parameter and a sid (session ID) query parameter MAY be included by the OP to enable the RP to validate the request and to determine which of the potentially multiple sessions is to be logged out; 
+				Description: `RP URL that will cause the RP to log itself out when rendered in an iframe by the OP.
+An iss (issuer) query parameter and a sid (session ID) query parameter MAY be included by the OP to enable the RP to validate the request and to determine which of the potentially multiple sessions is to be logged out;
 if either is included, both MUST be.`,
 			},
 			"grant_types": {
@@ -105,7 +106,7 @@ if either is included, both MUST be.`,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 					ValidateFunc: validation.StringInSlice([]string{
-						"refresh_token", "authorization_code", "client_credentials", "implicit", "urn:ietf:params:oauth:grant-type:jwt-bearer",
+						"authorization_code", "client_credentials", "implicit", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer",
 					}, false),
 				},
 			},
@@ -113,18 +114,18 @@ if either is included, both MUST be.`,
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem:     resourceJWK(),
-				Description: `A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key. 
-A JWK Set is a JSON data structure that represents a set of JWKs. 
+				Description: `A JSON Web Key (JWK) is a JavaScript Object Notation (JSON) data structure that represents a cryptographic key.
+A JWK Set is a JSON data structure that represents a set of JWKs.
 A JSON Web Key is identified by its set and key id. ORY Hydra uses this functionality to store cryptographic keys used for TLS and JSON Web Tokens (such as OpenID Connect ID tokens), and allows storing user-defined keys as well.`,
 			},
 			"jwks_uri": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Description: `URL for the Client's JSON Web Key Set [JWK] document. 
-If the Client signs requests to the Server, it contains the signing key(s) the Server uses to validate signatures from the Client. 
-The JWK Set MAY also contain the Client's encryption keys(s), which are used by the Server to encrypt responses to the Client. 
-When both signing and encryption keys are made available, a use (Key Use) parameter value is REQUIRED for all keys in the referenced JWK Set to indicate each key's intended usage. 
-Although some algorithms allow the same key to be used for both signatures and encryption, doing so is NOT RECOMMENDED, as it is less secure. 
+				Description: `URL for the Client's JSON Web Key Set [JWK] document.
+If the Client signs requests to the Server, it contains the signing key(s) the Server uses to validate signatures from the Client.
+The JWK Set MAY also contain the Client's encryption keys(s), which are used by the Server to encrypt responses to the Client.
+When both signing and encryption keys are made available, a use (Key Use) parameter value is REQUIRED for all keys in the referenced JWK Set to indicate each key's intended usage.
+Although some algorithms allow the same key to be used for both signatures and encryption, doing so is NOT RECOMMENDED, as it is less secure.
 The JWK x5c parameter MAY be used to provide X.509 representations of keys provided. When used, the bare key values MUST still be present and MUST match those in the certificate.`,
 			},
 			"logo_uri": {
@@ -179,10 +180,8 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					ValidateFunc: validation.StringInSlice([]string{
-						"token", "code", "id_token",
-					}, false),
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringInSlice([]string{"code", "id_token", "token"}, false),
 				},
 			},
 			"sector_identifier_uri": {
@@ -191,13 +190,11 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Description: "URL using the https scheme to be used in calculating Pseudonymous Identifiers by the OP. The URL references a file with a single JSON array of redirect_uri values.",
 			},
 			"subject_type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"public", "pairwise",
-				}, false),
-				Description: "SubjectType requested for responses to this Client. The subject_types_supported Discovery parameter contains a list of the supported subject_type values for this server. Valid types include `pairwise` and `public`.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"pairwise", "public"}, false),
+				Description:  "SubjectType requested for responses to this Client. The subject_types_supported Discovery parameter contains a list of the supported subject_type values for this server. Valid types include `pairwise` and `public`.",
 			},
 			"scopes": {
 				Type:     schema.TypeList,
@@ -212,7 +209,7 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Optional: true,
 				Computed: true,
 				ValidateFunc: validation.StringInSlice([]string{
-					"none", "client_secret_basic", "client_secret_post", "private_key_jwt",
+					"client_secret_basic", "client_secret_post", "none", "private_key_jwt",
 				}, false),
 				Description: "Requested Client Authentication method for the Token Endpoint. The options are `client_secret_post`, `client_secret_basic`, `private_key_jwt`, and `none`.",
 			},
@@ -230,8 +227,8 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-				Description: `JWS alg algorithm [JWA] REQUIRED for signing UserInfo Responses. 
-If this is specified, the response will be JWT [JWT] serialized, and signed using JWS. 
+				Description: `JWS alg algorithm [JWA] REQUIRED for signing UserInfo Responses.
+If this is specified, the response will be JWT [JWT] serialized, and signed using JWS.
 The default, if omitted, is for the UserInfo Response to return the Claims as a UTF-8 encoded JSON object using the application/json content-type.`,
 			},
 		},
@@ -243,154 +240,159 @@ The default, if omitted, is for the UserInfo Response to return the Claims as a 
 }
 
 func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	adminClient := meta.(*admin.Client)
+	hydraClient := meta.(*hydra.APIClient)
 
 	client := dataToClient(data)
 
-	resp, err := adminClient.CreateOAuth2Client(
-		admin.NewCreateOAuth2ClientParamsWithContext(ctx).
-			WithBody(client),
-	)
+	oAuth2Client, _, err := hydraClient.OAuth2Api.CreateOAuth2Client(ctx).OAuth2Client(*client).Execute()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	client = resp.Payload
-
-	return diag.FromErr(dataFromClient(data, client))
+	return diag.FromErr(dataFromClient(data, oAuth2Client))
 }
 
 func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	adminClient := meta.(*admin.Client)
+	hydraClient := meta.(*hydra.APIClient)
 
-	resp, err := adminClient.GetOAuth2Client(
-		admin.NewGetOAuth2ClientParamsWithContext(ctx).
-			WithID(data.Id()),
-	)
+	oAuth2Client, _, err := hydraClient.OAuth2Api.GetOAuth2Client(ctx, data.Id()).Execute()
 	if err != nil {
-		switch err.(type) {
-		case *admin.GetOAuth2ClientUnauthorized:
-			data.SetId("")
-			return nil
+		var genericOpenAPIError *hydra.GenericOpenAPIError
+		if errors.As(err, genericOpenAPIError) {
+			if err, ok := genericOpenAPIError.Model().(hydra.ErrorOAuth2); ok && err.StatusCode != nil && *err.StatusCode == 401 {
+				data.SetId("")
+				return nil
+			}
 		}
+		fmt.Println("Error2 SVH: ", err)
 		return diag.FromErr(err)
 	}
 
-	client := resp.Payload
-
-	return diag.FromErr(dataFromClient(data, client))
+	return diag.FromErr(dataFromClient(data, oAuth2Client))
 }
 
 func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	adminClient := meta.(*admin.Client)
+	hydraClient := meta.(*hydra.APIClient)
 
-	client := dataToClient(data)
+	oAuthClient := dataToClient(data)
 
-	resp, err := adminClient.UpdateOAuth2Client(
-		admin.NewUpdateOAuth2ClientParamsWithContext(ctx).
-			WithID(data.Id()).
-			WithBody(client),
-	)
+	oAuthClient, _, err := hydraClient.OAuth2Api.SetOAuth2Client(ctx, data.Id()).OAuth2Client(*oAuthClient).Execute()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	client = resp.Payload
-
-	return diag.FromErr(dataFromClient(data, client))
+	return diag.FromErr(dataFromClient(data, oAuthClient))
 }
 
 func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	adminClient := meta.(*admin.Client)
+	hydraClient := meta.(*hydra.APIClient)
 
-	_, err := adminClient.DeleteOAuth2Client(
-		admin.NewDeleteOAuth2ClientParamsWithContext(ctx).
-			WithID(data.Id()),
-	)
+	_, err := hydraClient.OAuth2Api.DeleteOAuth2Client(ctx, data.Id()).Execute()
 
 	return diag.FromErr(err)
 }
 
-func dataFromClient(data *schema.ResourceData, client *models.OAuth2Client) error {
-	data.SetId(client.ClientID)
-	data.Set("allowed_cors_origins", client.AllowedCorsOrigins)
-	data.Set("audience", client.Audience)
-	data.Set("backchannel_logout_session_required", client.BackchannelLogoutSessionRequired)
-	data.Set("backchannel_logout_uri", client.BackchannelLogoutURI)
-	data.Set("client_id", client.ClientID)
-	data.Set("client_name", client.ClientName)
-	if client.ClientSecret != "" {
-		data.Set("client_secret", client.ClientSecret)
+func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) error {
+	data.SetId(oAuthClient.GetClientId())
+	data.Set("allowed_cors_origins", oAuthClient.AllowedCorsOrigins)
+	data.Set("audience", oAuthClient.Audience)
+	data.Set("backchannel_logout_session_required", oAuthClient.BackchannelLogoutSessionRequired)
+	data.Set("backchannel_logout_uri", oAuthClient.GetBackchannelLogoutUri())
+	data.Set("client_id", oAuthClient.GetClientId())
+	data.Set("client_name", oAuthClient.ClientName)
+	if oAuthClient.ClientSecret != nil {
+		data.Set("client_secret", oAuthClient.ClientSecret)
 	}
-	data.Set("client_secret_expires_at", client.ClientSecretExpiresAt)
-	data.Set("client_uri", client.ClientURI)
-	data.Set("contacts", client.Contacts)
-	data.Set("frontchannel_logout_session_required", client.FrontchannelLogoutSessionRequired)
-	data.Set("frontchannel_logout_uri", client.FrontchannelLogoutURI)
-	data.Set("grant_types", client.GrantTypes)
-	jwks := &models.JSONWebKeySet{}
-	if err := mapstructure.Decode(client.Jwks.(map[string]interface{}), jwks); err != nil {
+	data.Set("client_secret_expires_at", oAuthClient.ClientSecretExpiresAt)
+	data.Set("client_uri", oAuthClient.GetClientUri())
+	data.Set("contacts", oAuthClient.Contacts)
+	data.Set("frontchannel_logout_session_required", oAuthClient.FrontchannelLogoutSessionRequired)
+	data.Set("frontchannel_logout_uri", oAuthClient.GetFrontchannelLogoutUri())
+	data.Set("grant_types", oAuthClient.GrantTypes)
+	jwks := &hydra.JsonWebKeySet{}
+	if err := mapstructure.Decode(oAuthClient.Jwks.(map[string]interface{}), jwks); err != nil {
 		return err
 	}
 	dataFromJWKS(data, jwks, "jwk")
-	data.Set("jwks_uri", client.JwksURI)
-	data.Set("logo_uri", client.LogoURI)
-	data.Set("metadata", client.Metadata)
-	data.Set("owner", client.Owner)
-	data.Set("policy_uri", client.PolicyURI)
-	data.Set("post_logout_redirect_uris", client.PostLogoutRedirectUris)
-	data.Set("redirect_uris", client.RedirectUris)
-	data.Set("request_object_signing_alg", client.RequestObjectSigningAlg)
-	data.Set("request_uris", client.RequestUris)
-	data.Set("response_types", client.ResponseTypes)
-	data.Set("sector_identifier_uri", client.SectorIdentifierURI)
-	data.Set("subject_type", client.SubjectType)
-	data.Set("scopes", strings.Split(client.Scope, " "))
-	data.Set("token_endpoint_auth_method", client.TokenEndpointAuthMethod)
-	data.Set("token_endpoint_auth_signing_alg", client.TokenEndpointAuthSigningAlg)
-	data.Set("tos_uri", client.TosURI)
-	data.Set("userinfo_signed_response_alg", client.UserinfoSignedResponseAlg)
+	data.Set("jwks_uri", oAuthClient.GetJwksUri())
+	data.Set("logo_uri", oAuthClient.GetLogoUri())
+	data.Set("metadata", oAuthClient.Metadata)
+	data.Set("owner", oAuthClient.Owner)
+	data.Set("policy_uri", oAuthClient.GetPolicyUri())
+	data.Set("post_logout_redirect_uris", oAuthClient.PostLogoutRedirectUris)
+	data.Set("redirect_uris", oAuthClient.RedirectUris)
+	data.Set("request_object_signing_alg", oAuthClient.RequestObjectSigningAlg)
+	data.Set("request_uris", oAuthClient.RequestUris)
+	data.Set("response_types", oAuthClient.ResponseTypes)
+	data.Set("sector_identifier_uri", oAuthClient.GetSectorIdentifierUri())
+	data.Set("subject_type", oAuthClient.SubjectType)
+	if oAuthClient.Scope == nil {
+		data.Set("scopes", oAuthClient.Scope)
+	} else {
+		data.Set("scopes", strings.Split(*oAuthClient.Scope, " "))
+	}
+	data.Set("token_endpoint_auth_method", oAuthClient.TokenEndpointAuthMethod)
+	data.Set("token_endpoint_auth_signing_alg", oAuthClient.TokenEndpointAuthSigningAlg)
+	data.Set("tos_uri", oAuthClient.GetTosUri())
+	data.Set("userinfo_signed_response_alg", oAuthClient.UserinfoSignedResponseAlg)
 	return nil
 }
 
-func dataToClient(data *schema.ResourceData) *models.OAuth2Client {
-	client := &models.OAuth2Client{}
+func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
+	client := &hydra.OAuth2Client{}
 	client.AllowedCorsOrigins = strSlice(data.Get("allowed_cors_origins").([]interface{}))
 	client.Audience = strSlice(data.Get("audience").([]interface{}))
-	client.BackchannelLogoutSessionRequired = data.Get("backchannel_logout_session_required").(bool)
-	client.BackchannelLogoutURI = data.Get("backchannel_logout_uri").(string)
-	client.ClientID = data.Get("client_id").(string)
-	client.ClientName = data.Get("client_name").(string)
+	client.SetBackchannelLogoutSessionRequired(data.Get("backchannel_logout_session_required").(bool))
+	client.SetBackchannelLogoutUri(data.Get("backchannel_logout_uri").(string))
+	client.SetClientId(data.Get("client_id").(string))
+	client.SetClientName(data.Get("client_name").(string))
 	if cs, ok := data.GetOk("client_secret"); ok {
-		client.ClientSecret = cs.(string)
+		client.ClientSecret = ptr(cs.(string))
 	}
-	client.ClientSecretExpiresAt = int64(data.Get("client_secret_expires_at").(int))
-	client.ClientURI = data.Get("client_uri").(string)
+	if csea, ok := data.GetOk("client_secret_expires_at"); ok {
+		client.ClientSecretExpiresAt = ptr(int64(csea.(int)))
+	}
+	client.SetClientUri(data.Get("client_uri").(string))
 	client.Contacts = strSlice(data.Get("contacts").([]interface{}))
-	client.FrontchannelLogoutSessionRequired = data.Get("frontchannel_logout_session_required").(bool)
-	client.FrontchannelLogoutURI = data.Get("frontchannel_logout_uri").(string)
+	if flsr, ok := data.GetOk("frontchannel_logout_session_required"); ok {
+		client.FrontchannelLogoutSessionRequired = ptr(flsr.(bool))
+	}
+	client.SetFrontchannelLogoutUri(data.Get("frontchannel_logout_uri").(string))
 	client.GrantTypes = strSlice(data.Get("grant_types").([]interface{}))
-	// only add jwks if jwk is declared
 	if jwk, ok := data.GetOk("jwk"); ok && jwk != nil {
 		client.Jwks = dataToJWKS(data, "jwk")
 	}
-	client.JwksURI = data.Get("jwks_uri").(string)
-	client.LogoURI = data.Get("logo_uri").(string)
+	client.SetJwksUri(data.Get("jwks_uri").(string))
+	client.SetLogoUri(data.Get("logo_uri").(string))
 	client.Metadata = data.Get("metadata")
-	client.Owner = data.Get("owner").(string)
-	client.PolicyURI = data.Get("policy_uri").(string)
+	if o, ok := data.GetOk("owner"); ok {
+		client.Owner = ptr(o.(string))
+	}
+	client.SetPolicyUri(data.Get("policy_uri").(string))
 	client.PostLogoutRedirectUris = strSlice(data.Get("post_logout_redirect_uris").([]interface{}))
 	client.RedirectUris = strSlice(data.Get("redirect_uris").([]interface{}))
-	client.RequestObjectSigningAlg = data.Get("request_object_signing_alg").(string)
+	if rosa, ok := data.GetOk("request_object_signing_alg"); ok {
+		client.RequestObjectSigningAlg = ptr(rosa.(string))
+	}
 	client.RequestUris = strSlice(data.Get("request_uris").([]interface{}))
 	client.ResponseTypes = strSlice(data.Get("response_types").([]interface{}))
-	client.SectorIdentifierURI = data.Get("sector_identifier_uri").(string)
-	client.SubjectType = data.Get("subject_type").(string)
+	client.SetSectorIdentifierUri(data.Get("sector_identifier_uri").(string))
+	if st, ok := data.GetOk("subject_type"); ok {
+		client.SubjectType = ptr(st.(string))
+	}
 	scopes := strSlice(data.Get("scopes").([]interface{}))
-	client.Scope = strings.Join(scopes, " ")
-	client.TokenEndpointAuthMethod = data.Get("token_endpoint_auth_method").(string)
-	client.TokenEndpointAuthSigningAlg = data.Get("token_endpoint_auth_signing_alg").(string)
-	client.TosURI = data.Get("tos_uri").(string)
-	client.UserinfoSignedResponseAlg = data.Get("userinfo_signed_response_alg").(string)
+	if len(scopes) > 0 {
+		client.Scope = ptr(strings.Join(scopes, " "))
+	}
+	if team, ok := data.GetOk("token_endpoint_auth_method"); ok {
+		client.TokenEndpointAuthMethod = ptr(team.(string))
+	}
+	if teasa, ok := data.GetOk("token_endpoint_auth_signing_alg"); ok {
+		client.TokenEndpointAuthSigningAlg = ptr(teasa.(string))
+	}
+	client.SetTosUri(data.Get("tos_uri").(string))
+	if usra, ok := data.GetOk("userinfo_signed_response_alg"); ok {
+		client.UserinfoSignedResponseAlg = ptr(usra.(string))
+	}
 	return client
 }

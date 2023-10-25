@@ -3,10 +3,10 @@ package provider
 import (
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"testing"
 
@@ -15,14 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testAccProviders map[string]*schema.Provider
-var testAccProvider *schema.Provider
-
-func init() {
-	testAccProvider = New()
-	testAccProviders = map[string]*schema.Provider{
-		"hydra": testAccProvider,
-	}
+var providerFactories = map[string]func() (*schema.Provider, error){
+	"hydra": func() (*schema.Provider, error) {
+		p := New()
+		return p, p.InternalValidate()
+	},
 }
 
 func TestProvider(t *testing.T) {
@@ -39,27 +36,33 @@ func TestProvider_basicAuth(t *testing.T) {
 	username := "johndoe"
 	password := "p455w0rd"
 
-	hydraAdminStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	jwks, err := os.ReadFile("./fixtures/jwks.json")
+	if err != nil {
+		t.Fatal("failed to read jwks.json")
+	}
+
+	hydraClientStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if u, p, ok := req.BasicAuth(); !ok || u != username || p != password {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
 	}))
-	defer hydraAdminStub.Close()
+	defer hydraClientStub.Close()
 	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		Providers:  testAccProviders,
+		IsUnitTest:        true,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testAccProviderBasicAuthConfig, hydraAdminStub.URL, username, password),
+				Config: fmt.Sprintf(testAccProviderBasicAuthConfig, hydraClientStub.URL, username, password),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "1"),
 				),
 			},
 			{
-				Config:      fmt.Sprintf(testAccProviderBasicAuthConfig, hydraAdminStub.URL, "invalid", "invalid"),
-				ExpectError: regexp.MustCompile("getJsonWebKeySetUnauthorized"),
+				Config:      fmt.Sprintf(testAccProviderBasicAuthConfig, hydraClientStub.URL, "invalid", "invalid"),
+				ExpectError: regexp.MustCompile("401 Unauthorized"),
 			},
 		},
 	})
@@ -69,22 +72,28 @@ func TestProvider_httpHeaderAuth(t *testing.T) {
 	name := "My-Header"
 	value := "t0ps3cr3t"
 
-	hydraAdminStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	jwks, err := os.ReadFile("./fixtures/jwks.json")
+	if err != nil {
+		t.Fatal("failed to read jwks.json")
+	}
+
+	hydraClientStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if v := req.Header.Get(name); v != value {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
 	}))
-	defer hydraAdminStub.Close()
+	defer hydraClientStub.Close()
 	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		Providers:  testAccProviders,
+		IsUnitTest:        true,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testAccProviderHttpHeaderConfig, hydraAdminStub.URL, name, value),
+				Config: fmt.Sprintf(testAccProviderHttpHeaderConfig, hydraClientStub.URL, name, value),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "1"),
 				),
 			},
 		},
@@ -95,22 +104,28 @@ func TestProvider_tlsAuth(t *testing.T) {
 	certFile := "./fixtures/tls.crt"
 	keyFile := "./fixtures/tls.key"
 
-	hydraAdminStub := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	jwks, err := os.ReadFile("./fixtures/jwks.json")
+	if err != nil {
+		t.Fatal("failed to read jwks.json")
+	}
+
+	hydraClientStub := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if len(req.TLS.PeerCertificates) == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
 	}))
-	hydraAdminStub.TLS.ClientAuth = tls.RequireAnyClientCert
-	defer hydraAdminStub.Close()
+	hydraClientStub.TLS.ClientAuth = tls.RequireAnyClientCert
+	defer hydraClientStub.Close()
 	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		Providers:  testAccProviders,
+		IsUnitTest:        true,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testAccProviderTLSAuthConfig, hydraAdminStub.URL, certFile, keyFile),
+				Config: fmt.Sprintf(testAccProviderTLSAuthConfig, hydraClientStub.URL, certFile, keyFile),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "1"),
 				),
 			},
 		},
@@ -118,6 +133,16 @@ func TestProvider_tlsAuth(t *testing.T) {
 }
 
 func TestProvider_oauth2Auth(t *testing.T) {
+	jwks, err := os.ReadFile("./fixtures/jwks.json")
+	if err != nil {
+		t.Fatal("failed to read jwks.json")
+	}
+
+	oauth2, err := os.ReadFile("./fixtures/oauth2.json")
+	if err != nil {
+		t.Fatal("failed to read oauth2.json")
+	}
+
 	oauth2Server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if err := req.ParseForm(); err != nil {
 			t.Fatal("failed to parse token endpoint request")
@@ -138,34 +163,33 @@ func TestProvider_oauth2Auth(t *testing.T) {
 		}, req.PostForm)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"access_token":"test_token","token_type":"Bearer","expires_in":1}`)
+		_, _ = w.Write(oauth2)
 	}))
 	defer oauth2Server.Close()
-	hydraAdminStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	hydraClientStub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Header.Get("Authorization") != "Bearer test_token" {
 			t.Fatal("received unauthorized request")
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
 	}))
-	defer hydraAdminStub.Close()
+	defer hydraClientStub.Close()
 	resource.Test(t, resource.TestCase{
-		IsUnitTest: true,
-		Providers:  testAccProviders,
+		IsUnitTest:        true,
+		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(testAccProviderOAuth2AuthConfig, hydraAdminStub.URL, oauth2Server.URL),
+				Config: fmt.Sprintf(testAccProviderOAuth2AuthConfig, hydraClientStub.URL, oauth2Server.URL),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "0"),
+					resource.TestCheckResourceAttr("data.hydra_jwks.test", "keys.#", "1"),
 				),
 			},
 		},
 	})
 }
 
-func testAccPreCheck(t *testing.T) {
-}
+func testAccPreCheck(t *testing.T) {}
 
 const (
 	testAccProviderBasicAuthConfig = `
@@ -182,8 +206,7 @@ provider "hydra" {
 
 data "hydra_jwks" "test" {
 	name = "test"
-}
-`
+}`
 
 	testAccProviderHttpHeaderConfig = `
 provider "hydra" {
@@ -199,8 +222,7 @@ provider "hydra" {
 
 data "hydra_jwks" "test" {
 	name = "test"
-}
-`
+}`
 
 	testAccProviderTLSAuthConfig = `
 provider "hydra" {
@@ -217,8 +239,7 @@ provider "hydra" {
 
 data "hydra_jwks" "test" {
 	name = "test"
-}
-`
+}`
 
 	testAccProviderOAuth2AuthConfig = `
 provider "hydra" {
@@ -237,6 +258,5 @@ provider "hydra" {
 
 data "hydra_jwks" "test" {
 	name = "test"
-}	
-	`
+}`
 )
