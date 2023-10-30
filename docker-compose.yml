@@ -1,20 +1,20 @@
 version: "3"
 services:
   hydra:
-    image: oryd/hydra:v1.11.8
+    image: oryd/hydra:v2.1.1
     environment:
       DSN: postgres://hydra:hydra@hydra-postgres:5432/hydra?sslmode=disable
     ports:
       - 4444:4444 # public
       - 4445:4445 # admin
-    command: serve -c /etc/hydra/config.yaml all --dangerous-force-http
+    command: serve -c /etc/hydra/config.yaml all --dev
     volumes:
       - ./etc/hydra:/etc/hydra
     depends_on:
       - hydra-migrate
     restart: unless-stopped
   hydra-migrate:
-    image: oryd/hydra:v1.11.8
+    image: oryd/hydra:v2.1.1
     command: migrate -c /etc/hydra/config.yaml sql -e --yes
     environment:
       DSN: postgres://hydra:hydra@hydra-postgres:5432/hydra?sslmode=disable

@@ -3,7 +3,7 @@ package provider
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/ory/hydra-client-go/models"
+	hydra "github.com/ory/hydra-client-go/v2"
 )
 
 func resourceJWK() *schema.Resource {
@@ -110,29 +110,56 @@ func resourceJWK() *schema.Resource {
 	}
 }
 
-func dataToJWK(data map[string]interface{}) *models.JSONWebKey {
-	return &models.JSONWebKey{
-		Alg: strPtr(data["alg"].(string)),
-		Kid: strPtr(data["kid"].(string)),
-		Use: strPtr(data["use"].(string)),
-		Kty: strPtr(data["kty"].(string)),
-		Crv: data["crv"].(string),
-		D:   data["d"].(string),
-		Dp:  data["dp"].(string),
-		Dq:  data["dq"].(string),
-		E:   data["e"].(string),
-		K:   data["k"].(string),
-		N:   data["n"].(string),
-		P:   data["p"].(string),
-		Q:   data["q"].(string),
-		Qi:  data["qi"].(string),
-		X:   data["x"].(string),
-		X5c: strSlice(data["x5c"].([]interface{})),
-		Y:   data["y"].(string),
+func dataToJWK(data map[string]interface{}) *hydra.JsonWebKey {
+	jwk := &hydra.JsonWebKey{
+		Alg: data["alg"].(string),
+		Kid: data["kid"].(string),
+		Use: data["use"].(string),
+		Kty: data["kty"].(string),
 	}
+	if crv := data["crv"].(string); crv != "" {
+		jwk.Crv = &crv
+	}
+	if d := data["d"].(string); d != "" {
+		jwk.D = &d
+	}
+	if dp := data["dp"].(string); dp != "" {
+		jwk.Dp = &dp
+	}
+	if dq := data["dq"].(string); dq != "" {
+		jwk.Dq = &dq
+	}
+	if e := data["e"].(string); e != "" {
+		jwk.E = &e
+	}
+	if k := data["k"].(string); k != "" {
+		jwk.K = &k
+	}
+	if n := data["n"].(string); n != "" {
+		jwk.N = &n
+	}
+	if p := data["p"].(string); p != "" {
+		jwk.P = &p
+	}
+	if q := data["q"].(string); q != "" {
+		jwk.Q = &q
+	}
+	if qi := data["qi"].(string); qi != "" {
+		jwk.Qi = &qi
+	}
+	if x := data["x"].(string); x != "" {
+		jwk.X = &x
+	}
+	if x5c := data["x5c"].([]interface{}); len(x5c) > 0 {
+		jwk.X5c = strSlice(x5c)
+	}
+	if y := data["y"].(string); y != "" {
+		jwk.Y = &y
+	}
+	return jwk
 }
 
-func dataFromJWK(jwk *models.JSONWebKey) map[string]interface{} {
+func dataFromJWK(jwk *hydra.JsonWebKey) map[string]interface{} {
 	return map[string]interface{}{
 		"alg": jwk.Alg,
 		"kid": jwk.Kid,
