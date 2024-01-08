@@ -195,6 +195,11 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Optional:    true,
 				Description: "URL using the https scheme to be used in calculating Pseudonymous Identifiers by the OP. The URL references a file with a single JSON array of redirect_uri values.",
 			},
+			"skip_consent": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "SkipConsent skips the consent screen for this client. This field can only be set from the admin API.",
+			},
 			"subject_type": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -332,6 +337,7 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	data.Set("request_uris", oAuthClient.RequestUris)
 	data.Set("response_types", oAuthClient.ResponseTypes)
 	data.Set("sector_identifier_uri", oAuthClient.GetSectorIdentifierUri())
+	data.Set("skip_consent", oAuthClient.SkipConsent)
 	data.Set("subject_type", oAuthClient.SubjectType)
 	if oAuthClient.Scope == nil {
 		data.Set("scopes", oAuthClient.Scope)
@@ -387,6 +393,9 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	client.RequestUris = strSlice(data.Get("request_uris").([]interface{}))
 	client.ResponseTypes = strSlice(data.Get("response_types").([]interface{}))
 	client.SetSectorIdentifierUri(data.Get("sector_identifier_uri").(string))
+	if sc, ok := data.GetOk("skip_consent"); ok {
+		client.SkipConsent = ptr(sc.(bool))
+	}
 	if st, ok := data.GetOk("subject_type"); ok {
 		client.SubjectType = ptr(st.(string))
 	}
