@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -242,6 +243,76 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 If this is specified, the response will be JWT [JWT] serialized, and signed using JWS.
 The default, if omitted, is for the UserInfo Response to return the Claims as a UTF-8 encoded JSON object using the application/json content-type.`,
 			},
+			"authorization_code_grant_access_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"authorization_code_grant_id_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"authorization_code_grant_refresh_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"client_credentials_grant_access_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"implicit_grant_access_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"implicit_grant_id_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"jwt_bearer_grant_access_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"refresh_token_grant_access_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"refresh_token_grant_id_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
+			"refresh_token_grant_refresh_token_lifespan": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				Description:      "Specify a time duration in milliseconds, seconds, minutes, hours.",
+				ValidateFunc:     validation.StringMatch(regexp.MustCompile(`^([0-9]+(ns|us|ms|s|m|h))*$`), "Specify a time duration in milliseconds, seconds, minutes, hours."),
+				DiffSuppressFunc: diffSuppressMatchingDurationStrings,
+			},
 		},
 		CreateContext: createOAuth2ClientResource,
 		ReadContext:   readOAuth2ClientResource,
@@ -348,6 +419,16 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	data.Set("token_endpoint_auth_signing_alg", oAuthClient.TokenEndpointAuthSigningAlg)
 	data.Set("tos_uri", oAuthClient.GetTosUri())
 	data.Set("userinfo_signed_response_alg", oAuthClient.UserinfoSignedResponseAlg)
+	data.Set("authorization_code_grant_access_token_lifespan", oAuthClient.AuthorizationCodeGrantAccessTokenLifespan)
+	data.Set("authorization_code_grant_id_token_lifespan", oAuthClient.AuthorizationCodeGrantIdTokenLifespan)
+	data.Set("authorization_code_grant_refresh_token_lifespan", oAuthClient.AuthorizationCodeGrantRefreshTokenLifespan)
+	data.Set("client_credentials_grant_access_token_lifespan", oAuthClient.ClientCredentialsGrantAccessTokenLifespan)
+	data.Set("implicit_grant_access_token_lifespan", oAuthClient.ImplicitGrantAccessTokenLifespan)
+	data.Set("implicit_grant_id_token_lifespan", oAuthClient.ImplicitGrantIdTokenLifespan)
+	data.Set("jwt_bearer_grant_access_token_lifespan", oAuthClient.JwtBearerGrantAccessTokenLifespan)
+	data.Set("refresh_token_grant_access_token_lifespan", oAuthClient.RefreshTokenGrantAccessTokenLifespan)
+	data.Set("refresh_token_grant_id_token_lifespan", oAuthClient.RefreshTokenGrantIdTokenLifespan)
+	data.Set("refresh_token_grant_refresh_token_lifespan", oAuthClient.RefreshTokenGrantRefreshTokenLifespan)
 	return nil
 }
 
@@ -412,6 +493,36 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	client.SetTosUri(data.Get("tos_uri").(string))
 	if usra, ok := data.GetOk("userinfo_signed_response_alg"); ok {
 		client.UserinfoSignedResponseAlg = ptr(usra.(string))
+	}
+	if acaatls, ok := data.GetOk("authorization_code_grant_access_token_lifespan"); ok {
+		client.AuthorizationCodeGrantAccessTokenLifespan = ptr(acaatls.(string))
+	}
+	if acaitls, ok := data.GetOk("authorization_code_grant_id_token_lifespan"); ok {
+		client.AuthorizationCodeGrantIdTokenLifespan = ptr(acaitls.(string))
+	}
+	if acartls, ok := data.GetOk("authorization_code_grant_refresh_token_lifespan"); ok {
+		client.AuthorizationCodeGrantRefreshTokenLifespan = ptr(acartls.(string))
+	}
+	if ccatls, ok := data.GetOk("client_credentials_grant_access_token_lifespan"); ok {
+		client.ClientCredentialsGrantAccessTokenLifespan = ptr(ccatls.(string))
+	}
+	if igatls, ok := data.GetOk("implicit_grant_access_token_lifespan"); ok {
+		client.ImplicitGrantAccessTokenLifespan = ptr(igatls.(string))
+	}
+	if igitls, ok := data.GetOk("implicit_grant_id_token_lifespan"); ok {
+		client.ImplicitGrantIdTokenLifespan = ptr(igitls.(string))
+	}
+	if jbgatls, ok := data.GetOk("jwt_bearer_grant_access_token_lifespan"); ok {
+		client.JwtBearerGrantAccessTokenLifespan = ptr(jbgatls.(string))
+	}
+	if rtgatls, ok := data.GetOk("refresh_token_grant_access_token_lifespan"); ok {
+		client.RefreshTokenGrantAccessTokenLifespan = ptr(rtgatls.(string))
+	}
+	if rtgitls, ok := data.GetOk("refresh_token_grant_id_token_lifespan"); ok {
+		client.RefreshTokenGrantIdTokenLifespan = ptr(rtgitls.(string))
+	}
+	if rtgrtls, ok := data.GetOk("refresh_token_grant_refresh_token_lifespan"); ok {
+		client.RefreshTokenGrantRefreshTokenLifespan = ptr(rtgrtls.(string))
 	}
 	return client
 }
