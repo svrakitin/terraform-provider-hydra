@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -76,13 +77,16 @@ func createJWKSResource(ctx context.Context, data *schema.ResourceData, meta int
 }
 
 func generateJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
 	setName := data.Get("name").(string)
 	generators := data.Get("generator").([]interface{})
 	generator := generators[0].(map[string]interface{})
 
-	_, _, err := hydraClient.JwkApi.CreateJsonWebKeySet(ctx, setName).CreateJsonWebKeySet(*dataToJWKGeneratorRequest(generator)).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		_, resp, err := hydraClient.JwkApi.CreateJsonWebKeySet(ctx, setName).CreateJsonWebKeySet(*dataToJWKGeneratorRequest(generator)).Execute()
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -93,8 +97,15 @@ func generateJWKSResource(ctx context.Context, data *schema.ResourceData, meta i
 }
 
 func readJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
-	jsonWebKeySet, _, err := hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
+	hydraClient := meta.(*HydraConfig).hydraClient
+	var jsonWebKeySet *hydra.JsonWebKeySet
+
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		var err error
+		var resp *http.Response
+		jsonWebKeySet, resp, err = hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -105,11 +116,14 @@ func readJWKSResource(ctx context.Context, data *schema.ResourceData, meta inter
 }
 
 func updateJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
 	setName := data.Get("name").(string)
 
-	_, _, err := hydraClient.JwkApi.SetJsonWebKeySet(ctx, setName).JsonWebKeySet(*dataToJWKS(data, "key")).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		_, resp, err := hydraClient.JwkApi.SetJsonWebKeySet(ctx, setName).JsonWebKeySet(*dataToJWKS(data, "key")).Execute()
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -120,11 +134,13 @@ func updateJWKSResource(ctx context.Context, data *schema.ResourceData, meta int
 }
 
 func deleteJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
 	setName := data.Get("name").(string)
 
-	_, err := hydraClient.JwkApi.DeleteJsonWebKeySet(ctx, setName).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		return hydraClient.JwkApi.DeleteJsonWebKeySet(ctx, setName).Execute()
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}

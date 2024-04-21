@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
-	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -322,11 +322,18 @@ The default, if omitted, is for the UserInfo Response to return the Claims as a 
 }
 
 func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
+
+	var oAuth2Client *hydra.OAuth2Client
 
 	client := dataToClient(data)
 
-	oAuth2Client, _, err := hydraClient.OAuth2Api.CreateOAuth2Client(ctx).OAuth2Client(*client).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		var err error
+		var resp *http.Response
+		oAuth2Client, resp, err = hydraClient.OAuth2Api.CreateOAuth2Client(ctx).OAuth2Client(*client).Execute()
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -335,18 +342,27 @@ func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 }
 
 func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
-	oAuth2Client, _, err := hydraClient.OAuth2Api.GetOAuth2Client(ctx, data.Id()).Execute()
+	var oAuth2Client *hydra.OAuth2Client
+
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		var resp *http.Response
+		var err error
+
+		oAuth2Client, resp, err = hydraClient.OAuth2Api.GetOAuth2Client(ctx, data.Id()).Execute()
+
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		var genericOpenAPIError *hydra.GenericOpenAPIError
-		if errors.As(err, genericOpenAPIError) {
-			if err, ok := genericOpenAPIError.Model().(hydra.ErrorOAuth2); ok && err.StatusCode != nil && *err.StatusCode == 401 {
+		if errors.As(err, &genericOpenAPIError) {
+			if apiError, ok := genericOpenAPIError.Model().(hydra.ErrorOAuth2); ok && apiError.StatusCode != nil && *apiError.StatusCode == 401 {
 				data.SetId("")
 				return nil
 			}
 		}
-		fmt.Println("Error2 SVH: ", err)
+
 		return diag.FromErr(err)
 	}
 
@@ -354,11 +370,17 @@ func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, me
 }
 
 func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
 	oAuthClient := dataToClient(data)
 
-	oAuthClient, _, err := hydraClient.OAuth2Api.SetOAuth2Client(ctx, data.Id()).OAuth2Client(*oAuthClient).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		var err error
+		var resp *http.Response
+		oAuthClient, resp, err = hydraClient.OAuth2Api.SetOAuth2Client(ctx, data.Id()).OAuth2Client(*oAuthClient).Execute()
+
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -367,9 +389,11 @@ func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 }
 
 func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*hydra.APIClient)
+	hydraClient := meta.(*HydraConfig).hydraClient
 
-	_, err := hydraClient.OAuth2Api.DeleteOAuth2Client(ctx, data.Id()).Execute()
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		return hydraClient.OAuth2Api.DeleteOAuth2Client(ctx, data.Id()).Execute()
+	}, meta.(*HydraConfig).backOff)
 
 	return diag.FromErr(err)
 }

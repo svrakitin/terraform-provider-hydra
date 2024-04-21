@@ -31,6 +31,7 @@ provider "hydra" {
 ### Optional
 
 - `authentication` (Block List, Max: 1) Optional block to specify an authentication method which is used to access Hydra Admin API. (see [below for nested schema](#nestedblock--authentication))
+- `retry` (Block List, Max: 1) Optional block to configure retry behavior for API requests. (see [below for nested schema](#nestedblock--retry))
 
 <a id="nestedblock--authentication"></a>
 ### Nested Schema for `authentication`
@@ -89,3 +90,15 @@ Required:
 Optional:
 
 - `insecure_skip_verify` (Boolean) Controls whether a client verifies the server's certificate chain and host name.
+
+
+
+<a id="nestedblock--retry"></a>
+### Nested Schema for `retry`
+
+Optional:
+
+- `enabled` (Boolean) Enable or disable retry behavior.
+- `max_elapsed_time` (String) Maximum time to spend retrying requests.
+- `max_interval` (String) Maximum interval between retries.
+- `randomization_factor` (Number) Randomization factor to add jitter to retry intervals.

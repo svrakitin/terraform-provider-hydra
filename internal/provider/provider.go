@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -20,6 +22,11 @@ func init() {
 	schema.DescriptionKind = schema.StringMarkdown
 }
 
+type HydraConfig struct {
+	hydraClient *hydra.APIClient
+	backOff     *backoff.ExponentialBackOff
+}
+
 func New() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -27,6 +34,42 @@ func New() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_URL", nil),
+			},
+			"retry": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Optional block to configure retry behavior for API requests.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Enable or disable retry behavior.",
+						},
+						"max_elapsed_time": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "30s",
+							Description:  "Maximum time to spend retrying requests.",
+							ValidateFunc: validateDuration,
+						},
+						"max_interval": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "3s",
+							Description:  "Maximum interval between retries.",
+							ValidateFunc: validateDuration,
+						},
+						"randomization_factor": {
+							Type:        schema.TypeFloat,
+							Optional:    true,
+							Default:     0.5,
+							Description: "Randomization factor to add jitter to retry intervals.",
+						},
+					},
+				},
 			},
 			"authentication": {
 				Type:        schema.TypeList,
@@ -188,7 +231,25 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 		},
 	}
 
-	return hydra.NewAPIClient(cfg), nil
+	var backOff *backoff.ExponentialBackOff
+	if retry, ok := data.GetOk("retry.0"); ok && data.Get("retry.0.enabled").(bool) {
+		backOff = backoff.NewExponentialBackOff()
+
+		retryConfig := retry.(map[string]interface{})
+
+		maxElapsedTime, _ := time.ParseDuration(retryConfig["max_elapsed_time"].(string))
+		maxInterval, _ := time.ParseDuration(retryConfig["max_interval"].(string))
+		randomizationFactor := retryConfig["randomization_factor"].(float64)
+
+		backOff.MaxElapsedTime = maxElapsedTime
+		backOff.MaxInterval = maxInterval
+		backOff.RandomizationFactor = randomizationFactor
+	}
+
+	return &HydraConfig{
+		hydraClient: hydra.NewAPIClient(cfg),
+		backOff:     backOff,
+	}, nil
 }
 
 func configureHTTPClient(data *schema.ResourceData) (*http.Client, error) {

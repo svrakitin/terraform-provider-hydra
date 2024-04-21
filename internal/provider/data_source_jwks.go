@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -31,8 +32,17 @@ A JSON Web Key is identified by its set and key id. ORY Hydra uses this function
 func readJWKSDataSource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	data.SetId(data.Get("name").(string))
 
-	hydraClient := meta.(*hydra.APIClient)
-	jsonWebKeySet, _, err := hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
+	hydraClient := meta.(*HydraConfig).hydraClient
+
+	var jsonWebKeySet *hydra.JsonWebKeySet
+
+	err := retryThrottledHydraAction(func() (*http.Response, error) {
+		var err error
+		var resp *http.Response
+		jsonWebKeySet, resp, err = hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
+		return resp, err
+	}, meta.(*HydraConfig).backOff)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
