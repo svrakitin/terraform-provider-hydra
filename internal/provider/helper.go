@@ -37,7 +37,7 @@ func diffSuppressMatchingDurationStrings(k, old, new string, d *schema.ResourceD
 }
 
 // retryThrottledHydraAction executes the fn function and if backOff is set, retries the function if the request is throttled.
-func retryThrottledHydraAction(fn func() (*http.Response, error), backOff backoff.BackOff) error {
+func retryThrottledHydraAction(fn func() (*http.Response, error), backOff *backoff.ExponentialBackOff) error {
 	if backOff == nil {
 		_, err := fn()
 		return err
