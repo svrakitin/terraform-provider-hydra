@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -37,8 +38,8 @@ func diffSuppressMatchingDurationStrings(k, old, new string, d *schema.ResourceD
 }
 
 // retryThrottledHydraAction executes the fn function and if backOff is set, retries the function if the request is throttled.
-func retryThrottledHydraAction(fn func() (*http.Response, error), backOff *backoff.ExponentialBackOff) error {
-	if backOff == nil {
+func retryThrottledHydraAction(fn func() (*http.Response, error), backOff backoff.BackOff) error {
+	if backOff == nil || reflect.ValueOf(backOff).IsNil() {
 		_, err := fn()
 		return err
 	}
