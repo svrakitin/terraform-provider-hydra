@@ -31,7 +31,7 @@ provider "hydra" {
 ### Optional
 
 - `authentication` (Block List, Max: 1) Optional block to specify an authentication method which is used to access Hydra Admin API. (see [below for nested schema](#nestedblock--authentication))
-- `retry` (Block List, Max: 1) Optional block to configure retry behavior for API requests. (see [below for nested schema](#nestedblock--retry))
+- `retry_policy` (Block List, Max: 1) Optional block to configure retry behavior for API requests. (see [below for nested schema](#nestedblock--retry_policy))
 
 <a id="nestedblock--authentication"></a>
 ### Nested Schema for `authentication`
@@ -93,8 +93,8 @@ Optional:
 
 
 
-<a id="nestedblock--retry"></a>
-### Nested Schema for `retry`
+<a id="nestedblock--retry_policy"></a>
+### Nested Schema for `retry_policy`
 
 Optional:
 
