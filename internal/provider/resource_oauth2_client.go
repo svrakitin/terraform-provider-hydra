@@ -322,7 +322,7 @@ The default, if omitted, is for the UserInfo Response to return the Claims as a 
 }
 
 func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	var oAuth2Client *hydra.OAuth2Client
 
@@ -333,7 +333,7 @@ func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 		var resp *http.Response
 		oAuth2Client, resp, err = hydraClient.OAuth2Api.CreateOAuth2Client(ctx).OAuth2Client(*client).Execute()
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -342,7 +342,7 @@ func createOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 }
 
 func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	var oAuth2Client *hydra.OAuth2Client
 
@@ -353,7 +353,7 @@ func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, me
 		oAuth2Client, resp, err = hydraClient.OAuth2Api.GetOAuth2Client(ctx, data.Id()).Execute()
 
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		var genericOpenAPIError *hydra.GenericOpenAPIError
 		if errors.As(err, &genericOpenAPIError) {
@@ -370,7 +370,7 @@ func readOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, me
 }
 
 func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	oAuthClient := dataToClient(data)
 
@@ -380,7 +380,7 @@ func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 		oAuthClient, resp, err = hydraClient.OAuth2Api.SetOAuth2Client(ctx, data.Id()).OAuth2Client(*oAuthClient).Execute()
 
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -389,11 +389,11 @@ func updateOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, 
 }
 
 func deleteOAuth2ClientResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	err := retryThrottledHydraAction(func() (*http.Response, error) {
 		return hydraClient.OAuth2Api.DeleteOAuth2Client(ctx, data.Id()).Execute()
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 
 	return diag.FromErr(err)
 }

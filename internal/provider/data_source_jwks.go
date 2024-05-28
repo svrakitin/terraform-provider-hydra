@@ -32,7 +32,7 @@ A JSON Web Key is identified by its set and key id. ORY Hydra uses this function
 func readJWKSDataSource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	data.SetId(data.Get("name").(string))
 
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	var jsonWebKeySet *hydra.JsonWebKeySet
 
@@ -41,7 +41,7 @@ func readJWKSDataSource(ctx context.Context, data *schema.ResourceData, meta int
 		var resp *http.Response
 		jsonWebKeySet, resp, err = hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 
 	if err != nil {
 		return diag.FromErr(err)

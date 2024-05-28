@@ -77,7 +77,7 @@ func createJWKSResource(ctx context.Context, data *schema.ResourceData, meta int
 }
 
 func generateJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	setName := data.Get("name").(string)
 	generators := data.Get("generator").([]interface{})
@@ -86,7 +86,7 @@ func generateJWKSResource(ctx context.Context, data *schema.ResourceData, meta i
 	err := retryThrottledHydraAction(func() (*http.Response, error) {
 		_, resp, err := hydraClient.JwkApi.CreateJsonWebKeySet(ctx, setName).CreateJsonWebKeySet(*dataToJWKGeneratorRequest(generator)).Execute()
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -97,7 +97,7 @@ func generateJWKSResource(ctx context.Context, data *schema.ResourceData, meta i
 }
 
 func readJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 	var jsonWebKeySet *hydra.JsonWebKeySet
 
 	err := retryThrottledHydraAction(func() (*http.Response, error) {
@@ -105,7 +105,7 @@ func readJWKSResource(ctx context.Context, data *schema.ResourceData, meta inter
 		var resp *http.Response
 		jsonWebKeySet, resp, err = hydraClient.JwkApi.GetJsonWebKeySet(ctx, data.Id()).Execute()
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -116,14 +116,14 @@ func readJWKSResource(ctx context.Context, data *schema.ResourceData, meta inter
 }
 
 func updateJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	setName := data.Get("name").(string)
 
 	err := retryThrottledHydraAction(func() (*http.Response, error) {
 		_, resp, err := hydraClient.JwkApi.SetJsonWebKeySet(ctx, setName).JsonWebKeySet(*dataToJWKS(data, "key")).Execute()
 		return resp, err
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -134,13 +134,13 @@ func updateJWKSResource(ctx context.Context, data *schema.ResourceData, meta int
 }
 
 func deleteJWKSResource(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	hydraClient := meta.(*HydraConfig).hydraClient
+	hydraClient := meta.(*ClientConfig).hydraClient
 
 	setName := data.Get("name").(string)
 
 	err := retryThrottledHydraAction(func() (*http.Response, error) {
 		return hydraClient.JwkApi.DeleteJsonWebKeySet(ctx, setName).Execute()
-	}, meta.(*HydraConfig).backOff)
+	}, meta.(*ClientConfig).backOff)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -22,7 +22,7 @@ func init() {
 	schema.DescriptionKind = schema.StringMarkdown
 }
 
-type HydraConfig struct {
+type ClientConfig struct {
 	hydraClient *hydra.APIClient
 	backOff     *backoff.ExponentialBackOff
 }
@@ -35,7 +35,7 @@ func New() *schema.Provider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("HYDRA_ADMIN_URL", nil),
 			},
-			"retry": {
+			"retry_policy": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
@@ -232,7 +232,7 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 	}
 
 	var backOff *backoff.ExponentialBackOff
-	if retry, ok := data.GetOk("retry.0"); ok && data.Get("retry.0.enabled").(bool) {
+	if retry, ok := data.GetOk("retry_policy.0"); ok && data.Get("retry_policy.0.enabled").(bool) {
 		backOff = backoff.NewExponentialBackOff()
 
 		retryConfig := retry.(map[string]interface{})
@@ -246,7 +246,7 @@ func providerConfigure(ctx context.Context, data *schema.ResourceData) (interfac
 		backOff.RandomizationFactor = randomizationFactor
 	}
 
-	return &HydraConfig{
+	return &ClientConfig{
 		hydraClient: hydra.NewAPIClient(cfg),
 		backOff:     backOff,
 	}, nil
