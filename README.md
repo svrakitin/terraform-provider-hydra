@@ -16,7 +16,7 @@ terraform {
   required_providers {
     hydra = {
       source = "svrakitin/hydra"
-      version = "0.5.2"
+      version = "0.5.3"
     }
   }
 }
