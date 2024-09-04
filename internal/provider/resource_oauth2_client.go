@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"encoding/json"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -140,12 +142,19 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Optional:    true,
 				Description: "LogoURI is an URL string that references a logo for the client.",
 			},
+			"metadata_json": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ValidateFunc: validation.StringIsJSON,
+				ConflictsWith: []string{"metadata"},
+			},
 			"metadata": {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				ConflictsWith: []string{"metadata_json"},
 			},
 			"owner": {
 				Type:        schema.TypeString,
@@ -423,7 +432,20 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	dataFromJWKS(data, jwks, "jwk")
 	data.Set("jwks_uri", oAuthClient.GetJwksUri())
 	data.Set("logo_uri", oAuthClient.GetLogoUri())
-	data.Set("metadata", oAuthClient.Metadata)
+	if data.Get("metadata") != nil {
+		fmt.Println("client data")
+		fmt.Println(oAuthClient.Metadata)
+		data.Set("metadata", oAuthClient.Metadata)
+	} else {
+		data.Set("metadata", nil)
+	}
+	if data.Get("metadata_json") != nil {
+		//client_metadata = oAuthClient.Metadata
+		metadata_json, _ := json.Marshal(oAuthClient.Metadata)
+		data.Set("metadata_json", metadata_json)
+	} else {
+		data.Set("metadata_json", nil)
+	}
 	data.Set("owner", oAuthClient.Owner)
 	data.Set("policy_uri", oAuthClient.GetPolicyUri())
 	data.Set("post_logout_redirect_uris", oAuthClient.PostLogoutRedirectUris)
@@ -453,6 +475,8 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	data.Set("refresh_token_grant_access_token_lifespan", oAuthClient.RefreshTokenGrantAccessTokenLifespan)
 	data.Set("refresh_token_grant_id_token_lifespan", oAuthClient.RefreshTokenGrantIdTokenLifespan)
 	data.Set("refresh_token_grant_refresh_token_lifespan", oAuthClient.RefreshTokenGrantRefreshTokenLifespan)
+	fmt.Println("Setdata")
+	fmt.Println(data)
 	return nil
 }
 
@@ -485,7 +509,18 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	}
 	client.SetJwksUri(data.Get("jwks_uri").(string))
 	client.SetLogoUri(data.Get("logo_uri").(string))
-	client.Metadata = data.Get("metadata")
+	if data.Get("metadata") != nil {
+		fmt.Println(data.Get("metadata"))
+		client.Metadata = data.Get("metadata")
+		//fmt.Println(client.Metadata)
+	}
+	if data.Get("metadata_json") != nil {
+		metadata_string := data.Get("metadata_json").(string)
+		var metadata map[string]any
+		json.Unmarshal([]byte(metadata_string), &metadata)
+		client.Metadata = metadata
+		//fmt.Println(client.Metadata)
+	}
 	if o, ok := data.GetOk("owner"); ok {
 		client.Owner = ptr(o.(string))
 	}
