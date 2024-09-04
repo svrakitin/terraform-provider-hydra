@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"encoding/json"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -432,19 +431,12 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	dataFromJWKS(data, jwks, "jwk")
 	data.Set("jwks_uri", oAuthClient.GetJwksUri())
 	data.Set("logo_uri", oAuthClient.GetLogoUri())
-	if data.Get("metadata") != nil {
-		fmt.Println("client data")
-		fmt.Println(oAuthClient.Metadata)
+	if len(data.Get("metadata").(map[string]interface{})) > 0 {
 		data.Set("metadata", oAuthClient.Metadata)
-	} else {
-		data.Set("metadata", nil)
 	}
-	if data.Get("metadata_json") != nil {
-		//client_metadata = oAuthClient.Metadata
+	if data.Get("metadata_json") != "" {
 		metadata_json, _ := json.Marshal(oAuthClient.Metadata)
 		data.Set("metadata_json", metadata_json)
-	} else {
-		data.Set("metadata_json", nil)
 	}
 	data.Set("owner", oAuthClient.Owner)
 	data.Set("policy_uri", oAuthClient.GetPolicyUri())
@@ -475,8 +467,6 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	data.Set("refresh_token_grant_access_token_lifespan", oAuthClient.RefreshTokenGrantAccessTokenLifespan)
 	data.Set("refresh_token_grant_id_token_lifespan", oAuthClient.RefreshTokenGrantIdTokenLifespan)
 	data.Set("refresh_token_grant_refresh_token_lifespan", oAuthClient.RefreshTokenGrantRefreshTokenLifespan)
-	fmt.Println("Setdata")
-	fmt.Println(data)
 	return nil
 }
 
@@ -509,17 +499,14 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	}
 	client.SetJwksUri(data.Get("jwks_uri").(string))
 	client.SetLogoUri(data.Get("logo_uri").(string))
-	if data.Get("metadata") != nil {
-		fmt.Println(data.Get("metadata"))
+	if len(data.Get("metadata").(map[string]interface{})) > 0 {
 		client.Metadata = data.Get("metadata")
-		//fmt.Println(client.Metadata)
 	}
-	if data.Get("metadata_json") != nil {
+	if data.Get("metadata_json") != "" {
 		metadata_string := data.Get("metadata_json").(string)
 		var metadata map[string]any
 		json.Unmarshal([]byte(metadata_string), &metadata)
 		client.Metadata = metadata
-		//fmt.Println(client.Metadata)
 	}
 	if o, ok := data.GetOk("owner"); ok {
 		client.Owner = ptr(o.(string))
