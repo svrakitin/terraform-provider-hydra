@@ -2,11 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
 	"strings"
-	"encoding/json"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -142,9 +142,9 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Description: "LogoURI is an URL string that references a logo for the client.",
 			},
 			"metadata_json": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ValidateFunc: validation.StringIsJSON,
+				Type:          schema.TypeString,
+				Optional:      true,
+				ValidateFunc:  validation.StringIsJSON,
 				ConflictsWith: []string{"metadata"},
 			},
 			"metadata": {
@@ -431,12 +431,31 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	dataFromJWKS(data, jwks, "jwk")
 	data.Set("jwks_uri", oAuthClient.GetJwksUri())
 	data.Set("logo_uri", oAuthClient.GetLogoUri())
-	if len(data.Get("metadata").(map[string]interface{})) > 0 {
-		data.Set("metadata", oAuthClient.Metadata)
-	}
-	if data.Get("metadata_json") != "" {
-		metadata_json, _ := json.Marshal(oAuthClient.Metadata)
-		data.Set("metadata_json", metadata_json)
+	if metadata, ok := oAuthClient.Metadata.(map[string]interface{}); ok {
+		// Check if any nested maps exist in metadata
+		useMetadataJSON := false
+		for _, v := range metadata {
+			if _, isMap := v.(map[string]interface{}); isMap {
+				useMetadataJSON = true
+				break
+			}
+		}
+		// If metadata contains nested structures, use metadata_json
+		if useMetadataJSON {
+			metadataJSON, err := json.Marshal(metadata)
+			if err != nil {
+				return err
+			}
+			data.Set("metadata_json", string(metadataJSON))
+			data.Set("metadata", nil)
+		} else {
+			// If no nested structures, use metadata
+			data.Set("metadata", metadata)
+			data.Set("metadata_json", nil)
+		}
+	} else {
+		data.Set("metadata", nil)
+		data.Set("metadata_json", nil)
 	}
 	data.Set("owner", oAuthClient.Owner)
 	data.Set("policy_uri", oAuthClient.GetPolicyUri())
@@ -499,14 +518,14 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	}
 	client.SetJwksUri(data.Get("jwks_uri").(string))
 	client.SetLogoUri(data.Get("logo_uri").(string))
-	if len(data.Get("metadata").(map[string]interface{})) > 0 {
-		client.Metadata = data.Get("metadata")
-	}
-	if data.Get("metadata_json") != "" {
-		metadata_string := data.Get("metadata_json").(string)
-		var metadata map[string]any
-		json.Unmarshal([]byte(metadata_string), &metadata)
-		client.Metadata = metadata
+	if metadataJSON, ok := data.GetOk("metadata_json"); ok {
+		var metadata map[string]interface{}
+		err := json.Unmarshal([]byte(metadataJSON.(string)), &metadata)
+		if err == nil {
+			client.Metadata = metadata
+		}
+	} else if metadata, ok := data.GetOk("metadata"); ok {
+		client.Metadata = metadata.(map[string]interface{})
 	}
 	if o, ok := data.GetOk("owner"); ok {
 		client.Owner = ptr(o.(string))
