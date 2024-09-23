@@ -24,7 +24,7 @@ jobs:
         with:
           version: v1.55.2
       - name: Run services
-        run: docker-compose up -d
+        run: docker compose up -d
       - name: Test
         env:
           HYDRA_ADMIN_URL: http://localhost:4445

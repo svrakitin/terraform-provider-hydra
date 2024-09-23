@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
@@ -140,12 +141,19 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 				Optional:    true,
 				Description: "LogoURI is an URL string that references a logo for the client.",
 			},
+			"metadata_json": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				ValidateFunc:  validation.StringIsJSON,
+				ConflictsWith: []string{"metadata"},
+			},
 			"metadata": {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				ConflictsWith: []string{"metadata_json"},
 			},
 			"owner": {
 				Type:        schema.TypeString,
@@ -423,7 +431,32 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	dataFromJWKS(data, jwks, "jwk")
 	data.Set("jwks_uri", oAuthClient.GetJwksUri())
 	data.Set("logo_uri", oAuthClient.GetLogoUri())
-	data.Set("metadata", oAuthClient.Metadata)
+	if metadata, ok := oAuthClient.Metadata.(map[string]interface{}); ok {
+		// Check if any nested maps exist in metadata
+		useMetadataJSON := false
+		for _, v := range metadata {
+			if _, isMap := v.(map[string]interface{}); isMap {
+				useMetadataJSON = true
+				break
+			}
+		}
+		// If metadata contains nested structures, use metadata_json
+		if useMetadataJSON {
+			metadataJSON, err := json.Marshal(metadata)
+			if err != nil {
+				return err
+			}
+			data.Set("metadata_json", string(metadataJSON))
+			data.Set("metadata", nil)
+		} else {
+			// If no nested structures, use metadata
+			data.Set("metadata", metadata)
+			data.Set("metadata_json", nil)
+		}
+	} else {
+		data.Set("metadata", nil)
+		data.Set("metadata_json", nil)
+	}
 	data.Set("owner", oAuthClient.Owner)
 	data.Set("policy_uri", oAuthClient.GetPolicyUri())
 	data.Set("post_logout_redirect_uris", oAuthClient.PostLogoutRedirectUris)
@@ -485,7 +518,15 @@ func dataToClient(data *schema.ResourceData) *hydra.OAuth2Client {
 	}
 	client.SetJwksUri(data.Get("jwks_uri").(string))
 	client.SetLogoUri(data.Get("logo_uri").(string))
-	client.Metadata = data.Get("metadata")
+	if metadataJSON, ok := data.GetOk("metadata_json"); ok {
+		var metadata map[string]interface{}
+		err := json.Unmarshal([]byte(metadataJSON.(string)), &metadata)
+		if err == nil {
+			client.Metadata = metadata
+		}
+	} else if metadata, ok := data.GetOk("metadata"); ok {
+		client.Metadata = metadata.(map[string]interface{})
+	}
 	if o, ok := data.GetOk("owner"); ok {
 		client.Owner = ptr(o.(string))
 	}
