@@ -432,15 +432,18 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 	data.Set("jwks_uri", oAuthClient.GetJwksUri())
 	data.Set("logo_uri", oAuthClient.GetLogoUri())
 	if metadata, ok := oAuthClient.Metadata.(map[string]interface{}); ok {
-		// Check if any nested maps exist in metadata
+		// Check if any nested maps or non-string values exist in metadata
 		useMetadataJSON := false
 		for _, v := range metadata {
-			if _, isMap := v.(map[string]interface{}); isMap {
+			switch v.(type) {
+			case string:
+				continue
+			default:
 				useMetadataJSON = true
 				break
 			}
 		}
-		// If metadata contains nested structures, use metadata_json
+		// If metadata contains nested structures or non-string values, use metadata_json
 		if useMetadataJSON {
 			metadataJSON, err := json.Marshal(metadata)
 			if err != nil {
@@ -449,7 +452,7 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 			data.Set("metadata_json", string(metadataJSON))
 			data.Set("metadata", nil)
 		} else {
-			// If no nested structures, use metadata
+			// If no nested structures or non-string values, use metadata
 			data.Set("metadata", metadata)
 			data.Set("metadata_json", nil)
 		}
