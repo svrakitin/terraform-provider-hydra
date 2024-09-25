@@ -440,7 +440,6 @@ func dataFromClient(data *schema.ResourceData, oAuthClient *hydra.OAuth2Client) 
 				continue
 			default:
 				useMetadataJSON = true
-				break
 			}
 		}
 		// If metadata contains nested structures or non-string values, use metadata_json
