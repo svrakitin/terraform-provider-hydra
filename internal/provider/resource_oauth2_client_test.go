@@ -35,6 +35,18 @@ func TestAccResourceOAuth2Client(t *testing.T) {
 					resource.TestCheckResourceAttr("hydra_oauth2_client.secret", "token_endpoint_auth_method", "client_secret_post"),
 				),
 			},
+			{
+				Config: testAccResourceOAuth2ClientWithMetadataJSON,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "client_name", "client_with_metadata_json"),
+					checkResourceAttrJSON("hydra_oauth2_client.client_with_metadata_json", "metadata_json", `{"nested": {"key": "value"}, "first_party": true}`),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "redirect_uris.#", "1"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "redirect_uris.0", "http://localhost:8080/callback"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "response_types.#", "1"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "response_types.0", "code"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "token_endpoint_auth_method", "none"),
+				),
+			},
 		},
 	})
 }
@@ -66,5 +78,23 @@ resource "hydra_oauth2_client" "secret" {
 	redirect_uris = ["http://localhost:8080/callback"]
 	response_types = ["code"]
 	token_endpoint_auth_method = "client_secret_post"
+}`
+
+	testAccResourceOAuth2ClientWithMetadataJSON = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
+resource "hydra_oauth2_client" "client_with_metadata_json" {
+	client_name = "client_with_metadata_json"
+	metadata_json = jsonencode({
+		"nested" = {
+			"key" = "value"
+		},
+		"first_party" = true
+	})
+	redirect_uris = ["http://localhost:8080/callback"]
+	response_types = ["code"]
+	token_endpoint_auth_method = "none"
 }`
 )

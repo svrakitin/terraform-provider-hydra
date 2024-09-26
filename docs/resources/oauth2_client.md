@@ -26,7 +26,7 @@ resource "hydra_oauth2_client" "example" {
 	metadata = {
 		"first_party" = true
 	}
-    
+
 	redirect_uris = ["http://localhost:8080/callback"]
 	response_types = ["code"]
 	token_endpoint_auth_method = "none"
@@ -75,6 +75,16 @@ The JWK x5c parameter MAY be used to provide X.509 representations of keys provi
 - `jwt_bearer_grant_access_token_lifespan` (String) Specify a time duration in milliseconds, seconds, minutes, hours.
 - `logo_uri` (String) LogoURI is an URL string that references a logo for the client.
 - `metadata` (Map of String)
+- `metadata_json` (String) A JSON-encoded string representing complex, nested metadata. This allows for more advanced configurations compared to the flat key-value pairs in the `metadata` field. Use `jsonencode` to provide this value in Terraform configurations. This field conflicts with `metadata`.
+#### Example
+```terraform
+metadata_json = jsonencode({
+  "nested_key" = {
+    "inner_key" = "value"
+  },
+  "first_party" = true
+})
+```
 - `owner` (String) Owner is a string identifying the owner of the OAuth 2.0 Client.
 - `policy_uri` (String) PolicyURI is a URL string that points to a human-readable privacy policy document that describes how the deployment organization collects, uses, retains, and discloses personal data.
 - `post_logout_redirect_uris` (List of String)
@@ -125,5 +135,3 @@ Optional:
 - `x` (String, Sensitive)
 - `x5c` (List of String)
 - `y` (String, Sensitive)
-
-
