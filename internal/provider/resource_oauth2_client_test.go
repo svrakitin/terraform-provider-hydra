@@ -47,6 +47,27 @@ func TestAccResourceOAuth2Client(t *testing.T) {
 					resource.TestCheckResourceAttr("hydra_oauth2_client.client_with_metadata_json", "token_endpoint_auth_method", "none"),
 				),
 			},
+			{
+				Config: testAccResourceOAuth2DeviceCodeClientConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "client_name", "device_code"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "token_endpoint_auth_method", "none"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "grant_types.#", "3"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "grant_types.0", "authorization_code"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "grant_types.1", "refresh_token"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.device_code", "grant_types.2", "urn:ietf:params:oauth:grant-type:device_code"),
+				),
+			},
+			{
+				Config: testAccResourceOAuth2TokenExchangeClientConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("hydra_oauth2_client.token_exchange", "client_name", "token_exchange"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.token_exchange", "token_endpoint_auth_method", "client_secret_post"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.token_exchange", "grant_types.#", "2"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.token_exchange", "grant_types.0", "client_credentials"),
+					resource.TestCheckResourceAttr("hydra_oauth2_client.token_exchange", "grant_types.1", "urn:ietf:params:oauth:grant-type:token-exchange"),
+				),
+			},
 		},
 	})
 }
@@ -96,5 +117,37 @@ resource "hydra_oauth2_client" "client_with_metadata_json" {
 	redirect_uris = ["http://localhost:8080/callback"]
 	response_types = ["code"]
 	token_endpoint_auth_method = "none"
+}`
+
+	testAccResourceOAuth2DeviceCodeClientConfig = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
+resource "hydra_oauth2_client" "device_code" {
+	client_name = "device_code"
+	grant_types = [
+		"authorization_code",
+		"refresh_token",
+		"urn:ietf:params:oauth:grant-type:device_code",
+	]
+	redirect_uris = ["http://localhost:8080/callback"]
+	response_types = ["code"]
+	token_endpoint_auth_method = "none"
+}`
+
+	testAccResourceOAuth2TokenExchangeClientConfig = `
+provider "hydra" {
+  endpoint = "http://localhost:4445"
+}
+
+resource "hydra_oauth2_client" "token_exchange" {
+	client_name = "token_exchange"
+	client_secret = "secret"
+	grant_types = [
+		"client_credentials",
+		"urn:ietf:params:oauth:grant-type:token-exchange",
+	]
+	token_endpoint_auth_method = "client_secret_post"
 }`
 )
